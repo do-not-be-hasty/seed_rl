@@ -14,6 +14,7 @@
 
 
 """Environment wrappers."""
+import sys
 
 from absl import flags
 import gym
@@ -211,3 +212,54 @@ class BatchedEnvironment:
   def close(self):
     for env in self._envs:
       env.close()
+
+
+class FloatWrapper(gym.Env):
+  def __init__(self, env):
+    self.env = env
+    self.action_space = env.action_space
+    self.observation_space = env.observation_space
+
+  def reset(self):
+    obs = self.env.reset()
+    return obs.astype(np.float32)
+
+  def step(self, action):
+    obs, rew, done, info = self.env.step(action)
+    return obs.astype(np.float32), rew, done, info
+
+  def render(self, mode='human'):
+    return self.env.render()
+
+
+class MultiWrapper(gym.Env):
+  def __init__(self, env, num_agents):
+    self.env = env
+    self.num_agents = num_agents
+    self.action_space = env.action_space[0]
+    self.observation_space = env.observation_space[0]
+    self.observation_space.shape = (len(env.observation_space),) + self.observation_space.shape
+    # self.observation_space.dtype = np.uint8
+    print(self.action_space, self.observation_space)
+
+  def reset(self):
+    obs = self.env.reset()
+    # print('reset', self._convert_observation(obs))
+    return self._convert_observation(obs)
+
+  def step(self, action):
+    action = self._convert_action(action)
+    obs, rew, done, info = self.env.step(action)
+    return self._convert_observation(obs), self._convert_reward(rew), done, info
+
+  def render(self, mode='human'):
+    return self.env.render()
+
+  def _convert_observation(self, obs):
+    return np.stack(obs).astype(np.uint8)
+
+  def _convert_action(self, action):
+    return (action,) * self.num_agents  # Pass the action to all agents. Not what one can expect, WIP
+
+  def _convert_reward(self, reward):
+    return np.sum(reward)  # just sum
