@@ -79,11 +79,11 @@ class GFootball(tf.Module):
 
     self.flatten = tf.keras.layers.Flatten()
     self.layer0 = tf.keras.layers.Dense(16, activation='relu')
-    self.layer1 = tf.keras.layers.Dense(16, activation=None)
+    self.layer1 = tf.keras.layers.Dense(16, activation='relu')
 
     # Layers for _head.
     self._policy_logits = tf.keras.layers.Dense(
-        self._parametric_action_distribution.param_size,
+        self._parametric_action_distribution._n_actions_per_dim,  # use _n_actions_per_dim as this layer is meant to be used for a single action
         name='policy_logits',
         kernel_initializer='lecun_normal')
     self._baseline = tf.keras.layers.Dense(
@@ -101,31 +101,26 @@ class GFootball(tf.Module):
 
   def _torso(self, unused_prev_action, env_output):
     _, _, frame, _, _ = env_output
-    print('frame', frame.shape)
-    print('single frame', frame[:,0])
 
-    return tf.concat([self._single_network_pass(frame[:,i]) for i in range(frame.shape[1])], axis=-1)
-    # return tf.stack([self._single_network_pass(frame[:,i]) for i in range(frame.shape[1])], axis=-1)
+    # NOTE stack the frames to separate computations of different agents
+    return tf.stack([self._single_network_pass(frame[:,i]) for i in range(frame.shape[1])], axis=1)
 
-  def _single_head(self, core_output):
+  def _head(self, core_output):
     policy_logits = self._policy_logits(core_output)
-    baseline = tf.squeeze(self._baseline(core_output), axis=-1)
+    # flatten last two dimensions -- required for further processing
+    policy_logits = tf.reshape(policy_logits,
+                               policy_logits.shape[:-2].concatenate(policy_logits.shape[-2] * policy_logits.shape[-1]))
+
+    # flatten last two dimensions -- required for further processing
+    # NOTE a SINGLE baseline is computed, given ALL the latents. Not sure whether this is theoretically correct, but at least actions are produced independently.
+    baseline = tf.squeeze(self._baseline(tf.reshape(core_output,
+               core_output.shape[:-2].concatenate(core_output.shape[-2] * core_output.shape[-1]))), axis=-1)
 
     # Sample an action from the policy.
+    # NOTE further processing requires logits and baseline to be flat. Not sure how it is processed.
     new_action = self._parametric_action_distribution.sample(policy_logits)
 
     return AgentOutput(new_action, policy_logits, baseline)
-
-  def _head(self, core_output):
-    print('core_output', core_output)
-    # print('core_output[0]', core_output[:,:,0])
-    # print('logits', self._policy_logits)
-
-    return self._single_head(core_output)
-    # print('out:', self._single_head(core_output[:,:,0]))
-    # AgentOutput(action=<tf.Tensor 'Categorical_1/sample/Reshape_2:0' shape=(1,) dtype=int64>,
-    # policy_logits=<tf.Tensor 'policy_logits/BiasAdd:0' shape=(1, 7) dtype=float32>,
-    # baseline=<tf.Tensor 'Squeeze:0' shape=(1,) dtype=float32>)
 
   # Not clear why, but if "@tf.function" declarator is placed directly onto
   # __call__, training fails with "uninitialized variable *baseline".
