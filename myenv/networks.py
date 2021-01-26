@@ -19,7 +19,6 @@ from seed_rl.common import utils
 from seed_rl.myenv import observation
 import tensorflow as tf
 
-
 AgentOutput = collections.namedtuple('AgentOutput',
                                      'action policy_logits baseline')
 
@@ -76,14 +75,19 @@ class GFootball(tf.Module):
 
     # Parameters and layers for unroll.
     self._parametric_action_distribution = parametric_action_distribution
+    self.num_agents = parametric_action_distribution._n_dimensions
 
+    self.conv0 = tf.keras.layers.Conv2D(16, 2, activation='relu')
+    self.conv1 = tf.keras.layers.Conv2D(32, 2, activation='relu')
     self.flatten = tf.keras.layers.Flatten()
-    self.layer0 = tf.keras.layers.Dense(16, activation='relu')
-    self.layer1 = tf.keras.layers.Dense(16, activation='relu')
+    self.layer0 = tf.keras.layers.Dense(128, activation='relu')
+    self.layer1 = tf.keras.layers.Dense(64, activation=None)
+
+    self.baseline_flatten = tf.keras.layers.Flatten()
 
     # Layers for _head.
     self._policy_logits = tf.keras.layers.Dense(
-        self._parametric_action_distribution._n_actions_per_dim,  # use _n_actions_per_dim as this layer is meant to be used for a single action
+        self._parametric_action_distribution._n_actions_per_dim,
         name='policy_logits',
         kernel_initializer='lecun_normal')
     self._baseline = tf.keras.layers.Dense(
@@ -93,7 +97,9 @@ class GFootball(tf.Module):
     return ()
 
   def _single_network_pass(self, observation):
-      x = self.flatten(observation)
+      x = self.conv0(observation)
+      x = self.conv1(x)
+      x = self.flatten(x)
       x = self.layer0(x)
       x = self.layer1(x)
 
@@ -103,23 +109,16 @@ class GFootball(tf.Module):
     _, _, frame, _, _ = env_output
 
     # NOTE stack the frames to separate computations of different agents
-    return tf.stack([self._single_network_pass(frame[:,i]) for i in range(frame.shape[1])], axis=1)
+    return tf.stack([self._single_network_pass(frame[:, i]) for i in range(self.num_agents)], axis=1)
 
   def _head(self, core_output):
-    policy_logits = self._policy_logits(core_output)
-    # flatten last two dimensions -- required for further processing
-    policy_logits = tf.reshape(policy_logits,
-                               policy_logits.shape[:-2].concatenate(policy_logits.shape[-2] * policy_logits.shape[-1]))
+    policy_logits = tf.concat([self._policy_logits(core_output[:, i]) for i in range(self.num_agents)], axis=-1)
 
-    # flatten last two dimensions -- required for further processing
-    # NOTE a SINGLE baseline is computed, given ALL the latents. Not sure whether this is theoretically correct, but at least actions are produced independently.
-    baseline = tf.squeeze(self._baseline(tf.reshape(core_output,
-               core_output.shape[:-2].concatenate(core_output.shape[-2] * core_output.shape[-1]))), axis=-1)
+    # NOTE a SINGLE baseline is computed, given ALL the latents
+    baseline = tf.squeeze(self._baseline(self.baseline_flatten(core_output)), axis=-1)
 
     # Sample an action from the policy.
-    # NOTE further processing requires logits and baseline to be flat. Not sure how it is processed.
     new_action = self._parametric_action_distribution.sample(policy_logits)
-
     return AgentOutput(new_action, policy_logits, baseline)
 
   # Not clear why, but if "@tf.function" declarator is placed directly onto

@@ -48,7 +48,6 @@ class UniformBoundActionSpaceWrapper(gym.Wrapper):
 
   def __init__(self, env):
     """Initialize the wrapper.
-
     Args:
       env: Environment to be wrapped. It must have an action space of type
         gym.spaces.Box.
@@ -76,7 +75,6 @@ class DiscretizeEnvWrapper(gym.Env):
   def __init__(self, env, n_actions_per_dim, discretization='lin',
                action_ratio=None):
     """"Discretize actions.
-
     Args:
       env: Environment to be wrapped.
       n_actions_per_dim: The number of buckets per action dimension.
@@ -133,7 +131,6 @@ class BatchedEnvironment:
 
   def __init__(self, create_env_fn, batch_size, id_offset):
     """Initialize the wrapper.
-
     Args:
       create_env_fn: A function to create environment instances.
       batch_size: The number of environment instances to create.
@@ -160,12 +157,10 @@ class BatchedEnvironment:
   @property
   def _mapped_obs(self):
     """Maps observations to preserve the original structure.
-
     This is needed to support environments that return structured observations.
     For example, gym.GoalEnv has `observation`, `desired_goal`, and
     `achieved_goal` elements in its observations. In this case the batched
     observations would contain the same three elements batched by element.
-
     Returns:
       Mapped observations.
     """
@@ -190,11 +185,9 @@ class BatchedEnvironment:
 
   def reset_if_done(self, done):
     """Reset the environments for which 'done' is True.
-
     Args:
       done: An array that specifies which environments are 'done', meaning their
         episode is terminated.
-
     Returns:
       Observations for all environments.
     """
@@ -242,7 +235,8 @@ class MultiWrapper(gym.Env):
 
     # concatenate a tuple of observations to one box [o1, o2, o3, ...]
     self.observation_space = env.observation_space[0]
-    self.observation_space.shape = (len(env.observation_space),) + self.observation_space.shape
+    self.observation_space.shape = (len(env.observation_space),) + env.observation_space[0].shape
+    self.observation_space.dtype = np.float32
 
   def reset(self):
     obs = self.env.reset()
@@ -256,7 +250,7 @@ class MultiWrapper(gym.Env):
     return self.env.render()
 
   def _convert_observation(self, obs):
-    return np.stack(obs).astype(np.uint8)
+    return np.stack([obs[i] for i in range(self.num_agents)], axis=0).astype(np.float32)
 
   def _convert_reward(self, reward):
     return np.sum(reward)  # just sum
