@@ -226,9 +226,9 @@ class FloatWrapper(gym.Env):
 
 
 class MultiWrapper(gym.Env):
-  def __init__(self, env, num_agents):
+  def __init__(self, env):
     self.env = env
-    self.num_agents = num_agents
+    self.num_agents = len(env.action_space)
 
     # convert a tuple of actions into one, MultiDiscrete action
     self.action_space = gym.spaces.MultiDiscrete([space.n for space in env.action_space])
@@ -250,7 +250,7 @@ class MultiWrapper(gym.Env):
     return self.env.render()
 
   def _convert_observation(self, obs):
-    return np.stack([obs[i] for i in range(self.num_agents)], axis=0).astype(np.float32)
+    return np.stack([obs[i] / 255. for i in range(self.num_agents)], axis=0).astype(np.float32)
 
   def _convert_reward(self, reward):
     return np.sum(reward)  # just sum

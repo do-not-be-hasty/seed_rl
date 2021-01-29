@@ -83,7 +83,13 @@ class GFootball(tf.Module):
     self.layer0 = tf.keras.layers.Dense(128, activation='relu')
     self.layer1 = tf.keras.layers.Dense(64, activation=None)
 
+    self.baseline_conv0 = tf.keras.layers.Conv2D(16, 2, activation='relu')
+    self.baseline_conv1 = tf.keras.layers.Conv2D(32, 2, activation='relu')
     self.baseline_flatten = tf.keras.layers.Flatten()
+    self.baseline_layer0 = tf.keras.layers.Dense(128, activation='relu')
+    self.baseline_layer1 = tf.keras.layers.Dense(64, activation=None)
+
+    self.final_flatten = tf.keras.layers.Flatten()
 
     # Layers for _head.
     self._policy_logits = tf.keras.layers.Dense(
@@ -96,26 +102,39 @@ class GFootball(tf.Module):
   def initial_state(self, batch_size):
     return ()
 
-  def _single_network_pass(self, observation):
-      x = self.conv0(observation)
-      x = self.conv1(x)
-      x = self.flatten(x)
-      x = self.layer0(x)
-      x = self.layer1(x)
+  def _single_policy_pass(self, observation):
+    x = self.conv0(observation)
+    x = self.conv1(x)
+    x = self.flatten(x)
+    x = self.layer0(x)
+    x = self.layer1(x)
 
-      return x
+    return x
+
+  def _single_baseline_pass(self, observation):
+    b = self.baseline_conv0(observation)
+    b = self.baseline_conv1(b)
+    b = self.baseline_flatten(b)
+    b = self.baseline_layer0(b)
+    b = self.baseline_layer1(b)
+
+    return b
 
   def _torso(self, unused_prev_action, env_output):
     _, _, frame, _, _ = env_output
 
+    baseline_output = self._single_baseline_pass(tf.concat([frame[:, i] for i in range(self.num_agents)], axis=-1))
+    policy_outputs = [self._single_policy_pass(frame[:, i]) for i in range(self.num_agents)]
+
     # NOTE stack the frames to separate computations of different agents
-    return tf.stack([self._single_network_pass(frame[:, i]) for i in range(self.num_agents)], axis=1)
+    return tf.stack(policy_outputs + [baseline_output], axis=1)
 
   def _head(self, core_output):
     policy_logits = tf.concat([self._policy_logits(core_output[:, i]) for i in range(self.num_agents)], axis=-1)
 
-    # NOTE a SINGLE baseline is computed, given ALL the latents
-    baseline = tf.squeeze(self._baseline(self.baseline_flatten(core_output)), axis=-1)
+    # NOTE a SINGLE baseline is computed for all the agents
+    baseline_input = self.final_flatten(core_output[:, self.num_agents])
+    baseline = tf.squeeze(self._baseline(baseline_input), axis=-1)
 
     # Sample an action from the policy.
     new_action = self._parametric_action_distribution.sample(policy_logits)

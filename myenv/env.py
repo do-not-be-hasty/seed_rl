@@ -89,4 +89,4 @@ def create_environment(_):
 
   logging.info('Creating environment: %s', task)
   env = gym.make(task)
-  return env_wrappers.MultiWrapper(env, num_agents=3)
+  return env_wrappers.MultiWrapper(env)
