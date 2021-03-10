@@ -28,7 +28,7 @@ import tensorflow as tf
 
 import neptune
 import neptune_tensorboard
-from mrunner.helpers.client_helper import get_configuration
+# from mrunner.helpers.client_helper import get_configuration
 
 
 FLAGS = flags.FLAGS
@@ -55,10 +55,10 @@ def main(argv):
   if FLAGS.run_mode == 'actor':
     actor.actor_loop(env.create_environment)
   elif FLAGS.run_mode == 'learner':
-    params = get_configuration(print_diagnostics=True,
-                               with_neptune=True)
-    print(params)
-    ajsgdhasjd
+    # params = get_configuration(print_diagnostics=True,
+    #                            with_neptune=True)
+    # print(params)
+    # ajsgdhasjd
     neptune.init('do-not-be-hasty/matrace')
     neptune.create_experiment(tags=[FLAGS.nonce])
     neptune_tensorboard.integrate_with_tensorflow()
