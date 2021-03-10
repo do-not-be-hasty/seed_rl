@@ -27,9 +27,14 @@ NUM_ACTORS=$3
 shift 3
 
 export PYTHONPATH=$PYTHONPATH:/
+export NEPTUNE_API_TOKEN="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vdWkubmVwdHVuZS5haSIsImFwaV91cmwiOiJodHRwczovL3VpLm5lcHR1bmUuYWkiLCJhcGlfa2V5IjoiZTE4NTY4ZmMtYzMzNy00ODQ0LTgxMDAtN2Q5MjY1ZDU0NWYwIn0="
 
-ACTOR_BINARY="CUDA_VISIBLE_DEVICES='' python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=actor";
-LEARNER_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=learner";
+NONCE=id00
+
+export NEPTUNE_PROJECT_NAME="do-not-be-hasty/local"
+
+ACTOR_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=actor --nonce=${NONCE}";
+LEARNER_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=learner --nonce=${NONCE}";
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 tmux new-session -d -t seed_rl

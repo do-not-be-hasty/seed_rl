@@ -11,7 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM tensorflow/tensorflow:2.3.0
+FROM tensorflow/tensorflow:2.1.0-gpu-py3
 
 # Needed to disable interactive configuration by tzdata.
 RUN ln -fs /usr/share/zoneinfo/Europe/Dublin /etc/localtime
@@ -38,11 +38,18 @@ RUN apt-get update && apt-get install -y \
   libboost-python-dev \
   tmux
 
-WORKDIR /
-RUN pip3 install gfootball==2.0.4
-RUN pip3 install tensorflow_probability==0.11.0
+  
+RUN pip3 install tensorflow_probability==0.9.0
+RUN pip3 install numpy
+RUN pip3 install tqdm
+RUN pip3 install gym
+RUN pip3 install gym-minigrid
+RUN pip3 install numba
+RUN pip3 install moviepy
 
-# Copy SEED codebase and SEED GRPC library.
-ADD . /seed_rl/
-WORKDIR /seed_rl
-ENTRYPOINT ["python", "gcp/run.py"]
+
+WORKDIR /
+ADD ./marlgrid /marlgrid/
+WORKDIR /marlgrid
+RUN pip3 install -e .
+

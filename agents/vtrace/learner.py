@@ -75,6 +75,9 @@ def compute_loss(logger, parametric_action_distribution, agent, agent_state,
   # Networks expect postprocessed prev_actions but it's done during inference.
   # agent((prev_actions[t], env_outputs[t]), agent_state)
   #   -> agent_outputs[t], agent_state'
+
+  session = logger.log_session()
+
   learner_outputs, _ = agent(prev_actions,
                              env_outputs,
                              agent_state,
@@ -88,7 +91,7 @@ def compute_loss(logger, parametric_action_distribution, agent, agent_state,
   # At this point, we have unroll length + 1 steps. The last step is only used
   # as bootstrap value, so it's removed.
   agent_outputs = tf.nest.map_structure(lambda t: t[:-1], agent_outputs)
-  rewards, done, _, _, _ = tf.nest.map_structure(lambda t: t[1:], env_outputs)
+  rewards, done, frame, _, _ = tf.nest.map_structure(lambda t: t[1:], env_outputs)
   learner_outputs = tf.nest.map_structure(lambda t: t[:-1], learner_outputs)
 
   if FLAGS.max_abs_reward:
@@ -109,7 +112,8 @@ def compute_loss(logger, parametric_action_distribution, agent, agent_state,
       rewards=rewards,
       values=learner_outputs.baseline,
       bootstrap_value=bootstrap_value,
-      lambda_=FLAGS.lambda_)
+      lambda_=FLAGS.lambda_,
+      logger=(logger, session))
 
   # Policy loss based on Policy Gradients
   policy_loss = -tf.reduce_mean(target_action_log_probs *
@@ -139,7 +143,6 @@ def compute_loss(logger, parametric_action_distribution, agent, agent_state,
                 entropy_adjustment_loss)
 
   # value function
-  session = logger.log_session()
   logger.log(session, 'V/value function',
              tf.reduce_mean(learner_outputs.baseline))
   logger.log(session, 'V/L2 error', tf.sqrt(tf.reduce_mean(tf.square(v_error))))
@@ -156,6 +159,8 @@ def compute_loss(logger, parametric_action_distribution, agent, agent_state,
     logger.log(session, 'policy/std', tf.reduce_mean(dist.scale))
   logger.log(session, 'policy/max_action_abs(before_tanh)',
              tf.reduce_max(tf.abs(agent_outputs.action)))
+  logger.log(session, 'policy/max_input_abs',
+             tf.reduce_max(tf.abs(frame)))
   logger.log(session, 'policy/entropy', entropy)
   logger.log(session, 'policy/entropy_cost', agent.entropy_cost())
   logger.log(session, 'policy/kl(old|new)', tf.reduce_mean(kl))
@@ -190,6 +195,8 @@ def learner_loop(create_env_fn, create_agent_fn, create_optimizer_fn):
       tf.keras.optimizers.schedules.LearningRateSchedule.
   """
   logging.info('Starting learner loop')
+  print('is_gpu_available', tf.test.is_gpu_available())
+  print('tf.test.is_built_with_cuda', tf.test.is_built_with_cuda())
   validate_config()
   settings = utils.init_learner_multi_host(FLAGS.num_training_tpus)
   strategy, hosts, training_strategy, encode, decode = settings
@@ -266,8 +273,12 @@ def learner_loop(create_env_fn, create_agent_fn, create_optimizer_fn):
         loss, logs = compute_loss(logger, parametric_action_distribution, agent,
                                   *args)
       grads = tape.gradient(loss, agent.trainable_variables)
+      norms = []
       for t, g in zip(temp_grads, grads):
+        norms.append(tf.norm(g))
+        # t.assign(tf.clip_by_norm(g, 1.))  # clipping
         t.assign(g)
+      logger.log(logs, 'gradient norm', tf.reduce_max(norms))
       return loss, logs
 
     loss, logs = training_strategy.run(compute_gradients, (data,))
@@ -303,7 +314,9 @@ def learner_loop(create_env_fn, create_agent_fn, create_optimizer_fn):
   summary_writer = tf.summary.create_file_writer(
       FLAGS.logdir, flush_millis=20000, max_queue=1000)
   logger = utils.ProgressLogger(summary_writer=summary_writer,
-                                starting_step=iterations * iter_frame_ratio)
+                                starting_step=iterations * iter_frame_ratio,
+                                initial_period=1, max_period=60 * 10,
+                                period_factor=1.05)
 
   servers = []
   unroll_queues = []
@@ -460,14 +473,13 @@ def learner_loop(create_env_fn, create_agent_fn, create_optimizer_fn):
       episode_keys = [
           'episode_num_frames', 'episode_return', 'episode_raw_return'
       ]
-      for key, values in zip(episode_keys, episode_stats):
-        for value in tf.split(values,
-                              values.shape[0] // FLAGS.log_episode_frequency):
-          tf.summary.scalar(key, tf.reduce_mean(value))
+      for key, value in zip(episode_keys, episode_stats):
+        tf.summary.scalar(key, tf.reduce_mean(value))
 
-      for (frames, ep_return, raw_return) in zip(*episode_stats):
-        logging.info('Return: %f Raw return: %f Frames: %i', ep_return,
-                     raw_return, frames)
+      logging.info('Return: %f Raw return: %f Frames: %i',
+                   tf.reduce_mean(episode_stats[1]),
+                   tf.reduce_mean(episode_stats[2]),
+                   tf.reduce_mean(episode_stats[0]))
 
   logger.start(additional_logs)
   # Execute learning.

@@ -27,6 +27,9 @@ from seed_rl.common import profiling
 from seed_rl.common import utils
 import tensorflow as tf
 
+import neptune
+import time
+
 
 FLAGS = flags.FLAGS
 
@@ -49,6 +52,19 @@ def actor_loop(create_env_fn):
     create_env_fn: Callable (taking the task ID as argument) that must return a
       newly created environment.
   """
+
+  project = neptune.init('do-not-be-hasty/matrace')
+
+  if FLAGS.task == 0:
+    while True:
+      time.sleep(5)
+      experiments = project.get_experiments(tag=FLAGS.nonce)
+      if len(experiments) == 0:
+        logging.info('Experiment not found, retry...')
+      else:
+        experiment = experiments[-1]
+        break
+
   env_batch_size = FLAGS.env_batch_size
   logging.info('Starting actor loop. Task: %r. Environment batch size: %r',
                FLAGS.task, env_batch_size)
@@ -91,6 +107,7 @@ def actor_loop(create_env_fn):
         episode_step_sum = 0
         episode_return_sum = 0
         episode_raw_return_sum = 0
+        episode_won = 0
         episodes_in_report = 0
 
         elapsed_inference_s_timer = timer_cls('actor/elapsed_inference_s', 1000)
@@ -144,20 +161,27 @@ def actor_loop(create_env_fn):
               episode_return_sum += episode_return[i]
               episode_raw_return_sum += episode_raw_return[i]
               global_step += episode_step[i]
+              episode_won += (info[i] or {}).get('battle_won', False)
               episodes_in_report += 1
-              if current_time - last_log_time > 1:
+              if current_time - last_log_time > 30:
                 logging.info(
                     'Actor steps: %i, Return: %f Raw return: %f '
-                    'Episode steps: %f, Speed: %f steps/s', global_step,
+                    'Episode steps: %f, Speed: %f steps/s, Won: %.2f', global_step,
                     episode_return_sum / episodes_in_report,
                     episode_raw_return_sum / episodes_in_report,
                     episode_step_sum / episodes_in_report,
                     (global_step - last_global_step) /
-                    (current_time - last_log_time))
+                    (current_time - last_log_time),
+                    episode_won / episodes_in_report)
+                tf.summary.scalar('episodes win rate', episode_won / episodes_in_report, step=global_step)
+                if FLAGS.task == 0:
+                  experiment.log_metric(log_name='episode win rate', x=global_step, y=episode_won / episodes_in_report)
+
                 last_global_step = global_step
                 episode_return_sum = 0
                 episode_raw_return_sum = 0
                 episode_step_sum = 0
+                episode_won = 0
                 episodes_in_report = 0
                 last_log_time = current_time
 

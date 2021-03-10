@@ -226,31 +226,152 @@ class FloatWrapper(gym.Env):
 
 
 class MultiWrapper(gym.Env):
-  def __init__(self, env):
+  def __init__(self, env, normalization=None):
     self.env = env
     self.num_agents = len(env.action_space)
+    if normalization is None:
+      self.normalization = (lambda x: x)
+    else:
+      self.normalization = normalization
 
-    # convert a tuple of actions into one, MultiDiscrete action
     self.action_space = gym.spaces.MultiDiscrete([space.n for space in env.action_space])
 
-    # concatenate a tuple of observations to one box [o1, o2, o3, ...]
     self.observation_space = env.observation_space[0]
     self.observation_space.shape = (len(env.observation_space),) + env.observation_space[0].shape
     self.observation_space.dtype = np.float32
+
+    print(env.action_space, env.observation_space)
+    print(self.action_space, self.observation_space)
 
   def reset(self):
     obs = self.env.reset()
     return self._convert_observation(obs)
 
   def step(self, action):
+    action = self._convert_action(action)
     obs, rew, done, info = self.env.step(action)
     return self._convert_observation(obs), self._convert_reward(rew), done, info
 
   def render(self, mode='human'):
-    return self.env.render()
+    return self.env.render(mode)
 
   def _convert_observation(self, obs):
-    return np.stack([obs[i] / 255. for i in range(self.num_agents)], axis=0).astype(np.float32)
+    return np.stack([self.normalization(obs[i]) for i in range(self.num_agents)], axis=0).astype(np.float32)
+
+  def _convert_action(self, action):
+    return action
 
   def _convert_reward(self, reward):
-    return np.sum(reward)  # just sum
+    return np.sum(reward)
+
+
+class ParticleWrapper(gym.Env):
+  def __init__(self, env, normalization=None):
+    self.env = env
+    self.num_agents = len(env.action_space)
+    if normalization is None:
+      self.normalization = (lambda x: x)
+    else:
+      self.normalization = normalization
+
+    self.n_step = 0
+    self.step_limit = 25
+
+    # The discrete action space in fact mean N binary actions
+    self.action_dim = env.action_space[0].n
+    self.action_dims = [space.n for space in env.action_space]
+    self.action_space = gym.spaces.MultiDiscrete([2 for _ in range(sum(self.action_dims))])
+
+    self.observation_space = env.observation_space[0]
+    self.observation_space.shape = (len(env.observation_space),) + env.observation_space[0].shape
+    self.observation_space.dtype = np.float32
+
+    print(env.action_space, env.observation_space)
+    print(self.action_space, self.observation_space)
+
+  def reset(self):
+    self.n_step = 0
+    obs = self.env.reset()
+    return self._convert_observation(obs)
+
+  def step(self, action):
+    self.n_step += 1
+    action = self._convert_action(action)
+    obs, rew, done, info = self.env.step(action)
+    done = np.all(done) or self.n_step >= self.step_limit
+    return self._convert_observation(obs), self._convert_reward(rew), done, info
+
+  def render(self, mode='human'):
+    return self.env.render(mode=mode)
+
+  def _convert_observation(self, obs):
+    return np.stack([self.normalization(obs[i]) for i in range(self.num_agents)], axis=0).astype(np.float32)
+
+  def _convert_action(self, action):
+    # print(action)
+    act = [action[self.action_dim * i:self.action_dim * (i + 1)] for i in range(self.num_agents)]
+    # print(act)
+    return act
+    # return action
+    # return [np.eye(5)[a] for a in action]
+
+  def _convert_reward(self, reward):
+    return reward[0] / 100
+
+
+class SCWrapper(gym.Env):
+  def __init__(self, env, normalization=None):
+    self.env = env
+
+    if normalization is None:
+      self.normalization = (lambda x: x)
+    else:
+      self.normalization = normalization
+
+    info = self.env.get_env_info()
+    self.num_agents = info['n_agents']
+
+    self.action_space = gym.spaces.MultiDiscrete([info['n_actions'] for _ in range(self.num_agents)])
+
+    self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(info['n_agents'], info['obs_shape'] + info['n_actions']))
+    self.observation_space.dtype = np.float32
+
+    print(self.action_space, self.observation_space)
+
+  def reset(self):
+    self.env.reset()
+    obs = self.env.get_obs()
+    return self._convert_observation(obs)
+
+  def step(self, action):
+    action = self._convert_action(action)
+    rew, done, info = self.env.step(action)
+    obs = self.env.get_obs()
+    return self._convert_observation(obs), self._convert_reward(rew), done, info
+
+  def render(self, mode='human'):
+    return self.env.render(mode)
+
+  def _convert_observation(self, obs):
+    return np.stack([np.concatenate([self.normalization(obs[i]), self.env.get_avail_agent_actions(i)]) for i in range(self.num_agents)], axis=0).astype(np.float32)
+
+  def _convert_action(self, action):
+    true_actions = []
+    # print('init action', action)
+    for i in range(self.num_agents):
+      a = action[i]
+      avail_actions = self.env.get_avail_agent_actions(i)
+      if avail_actions[a] == 0:
+      # if True:
+        print('invalid action')
+        avail_actions_ind = np.nonzero(avail_actions)[0]
+        a = np.random.choice(avail_actions_ind)
+      true_actions.append(a)
+      # print('info', i, a, avail_actions)
+
+    # print('true actions', true_actions)
+    return true_actions
+
+
+  def _convert_reward(self, reward):
+    return np.sum(reward)

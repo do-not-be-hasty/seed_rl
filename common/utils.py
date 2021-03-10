@@ -29,8 +29,9 @@ import tensorflow_probability as tfp
 
 from tensorflow.python.distribute import values as values_lib  
 from tensorflow.python.framework import composite_tensor  
-from tensorflow.python.framework import tensor_conversion_registry  
+from tensorflow.python.framework import tensor_conversion_registry
 
+import neptune
 
 
 FLAGS = flags.FLAGS
@@ -48,6 +49,12 @@ Settings = collections.namedtuple(
 
 MultiHostSettings = collections.namedtuple(
     'MultiHostSettings', 'strategy hosts training_strategy encode decode')
+
+
+def log_metric(name, value, namespace=None):
+    full_name = namespace + ' ' + name if namespace else name
+    # print(full_name, value)
+    neptune.log_metric(full_name, value)
 
 
 def init_learner_multi_host(num_training_tpus: int):
@@ -540,7 +547,7 @@ class ProgressLogger(object):
                summary_writer=None,
                initial_period=0.01,
                period_factor=1.01,
-               max_period=10.0,
+               max_period=100.0,
                starting_step=0):
     """Constructs ProgressLogger.
 
@@ -568,6 +575,7 @@ class ProgressLogger(object):
     self.ready_values = tf.Variable([-1.0],
                                     dtype=tf.float32,
                                     shape=tf.TensorShape(None))
+    self.log_timestep_bias = 0
     self.logger_thread = None
     self.logging_callback = None
     self.terminator = None
@@ -625,12 +633,16 @@ class ProgressLogger(object):
       logs.append(value)
     self.ready_values.assign(logs)
     self.step_cnt.assign_add(step_increment)
+    # tf.print('writer debugs', self.ready_values, self.step_cnt)
 
   def _log(self):
     """Perform single round of logging."""
     logging_time = timeit.default_timer()
     step_cnt = self.step_cnt.read_value()
     values = self.ready_values.read_value().numpy()
+    step_cnt += self.log_timestep_bias
+    self.log_timestep_bias += 1
+    tf.summary.scalar('log bias', self.log_timestep_bias)
     if values[0] == -1:
       return
     assert len(values) == len(

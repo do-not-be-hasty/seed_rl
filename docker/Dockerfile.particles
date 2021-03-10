@@ -11,7 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM tensorflow/tensorflow:2.3.0
+FROM marlgrid_base
+#FROM tensorflow/tensorflow:2.3.0
 
 # Needed to disable interactive configuration by tzdata.
 RUN ln -fs /usr/share/zoneinfo/Europe/Dublin /etc/localtime
@@ -36,13 +37,17 @@ RUN apt-get update && apt-get install -y \
   python3-pip \
   libboost-all-dev \
   libboost-python-dev \
-  tmux
+  tmux \
+  wget
 
 WORKDIR /
-RUN pip3 install gfootball==2.0.4
+RUN pip3 install tensorflow==2.3.0
+RUN pip3 install gym box2d
 RUN pip3 install tensorflow_probability==0.11.0
+#RUN pip3 install git+https://github.com/kandouss/marlgrid.git#egg=marlgrid
 
 # Copy SEED codebase and SEED GRPC library.
 ADD . /seed_rl/
+RUN pip3 install /seed_rl/multiagent-particle-envs/
 WORKDIR /seed_rl
 ENTRYPOINT ["python", "gcp/run.py"]

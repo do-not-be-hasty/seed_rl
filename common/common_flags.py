@@ -17,15 +17,17 @@
 """
 
 from absl import flags
+import numpy as np
 
 flags.DEFINE_string('logdir', '/tmp/agent', 'TensorFlow log directory.')
 flags.DEFINE_alias('job-dir', 'logdir')
 flags.DEFINE_string('server_address', 'localhost:8686', 'Server address.',
                     allow_hide_cpp=True)
 
+flags.DEFINE_string('nonce', None, 'Unique ID of experiment')
 
 flags.DEFINE_enum(
-    'run_mode', None, ['learner', 'actor'],
+    'run_mode', None, ['learner', 'actor', 'visualize'],
     'Whether we run the learner or the actor. Each actor runs the environment '
     'and sends to the learner each env observation and receives the action to '
     'play. A learner performs policy inference for batches of observations '

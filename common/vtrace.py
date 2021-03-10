@@ -35,7 +35,7 @@ def from_importance_weights(
     target_action_log_probs, behaviour_action_log_probs,
     discounts, rewards, values, bootstrap_value,
     clip_rho_threshold=1.0, clip_pg_rho_threshold=1.0, lambda_=1.0,
-    name='vtrace_from_importance_weights'):
+    name='vtrace_from_importance_weights', logger=None):
   r"""V-trace from log importance weights.
 
   Calculates V-trace actor critic targets as described in
@@ -142,6 +142,14 @@ def from_importance_weights(
       clipped_pg_rhos = rhos
     pg_advantages = (
         clipped_pg_rhos * (rewards + discounts * vs_t_plus_1 - values))
+
+    if logger is not None:
+      logger, session = logger
+      logger.log(session, 'IS/max_rho', tf.reduce_max(rhos))
+      logger.log(session, 'IS/max_clipped_rho', tf.reduce_max(clipped_rhos))
+      logger.log(session, 'IS/min_rho', tf.reduce_min(rhos))
+      logger.log(session, 'IS/mean_clipped_rho', tf.reduce_mean(clipped_rhos))
+      logger.log(session, 'IS/mean_c', tf.reduce_mean(cs))
 
     # Make sure no gradients backpropagated through the returned values.
     return VTraceReturns(vs=tf.stop_gradient(vs),
