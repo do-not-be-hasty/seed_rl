@@ -21,7 +21,7 @@ from absl import flags
 from absl import logging
 import numpy as np
 from seed_rl import grpc
-from seed_rl.common import common_flags  
+from seed_rl.common import common_flags
 from seed_rl.common import env_wrappers
 from seed_rl.common import profiling
 from seed_rl.common import utils
@@ -53,17 +53,20 @@ def actor_loop(create_env_fn):
       newly created environment.
   """
 
-  project = neptune.init('do-not-be-hasty/matrace')
+  # TODO():
+  # project = neptune.init('do-not-be-hasty/matrace')
 
   if FLAGS.task == 0:
-    while True:
-      time.sleep(5)
-      experiments = project.get_experiments(tag=FLAGS.nonce)
-      if len(experiments) == 0:
-        logging.info('Experiment not found, retry...')
-      else:
-        experiment = experiments[-1]
-        break
+    pass
+    # TODO(implement me again):
+    # while True:
+    #   time.sleep(5)
+    #   experiments = project.get_experiments(tag=FLAGS.nonce)
+    #   if len(experiments) == 0:
+    #     logging.info('Experiment not found, retry...')
+    #   else:
+    #     experiment = experiments[-1]
+    #     break
 
   env_batch_size = FLAGS.env_batch_size
   logging.info('Starting actor loop. Task: %r. Environment batch size: %r',
@@ -174,8 +177,8 @@ def actor_loop(create_env_fn):
                     (current_time - last_log_time),
                     episode_won / episodes_in_report)
                 tf.summary.scalar('episodes win rate', episode_won / episodes_in_report, step=global_step)
-                if FLAGS.task == 0:
-                  experiment.log_metric(log_name='episode win rate', x=global_step, y=episode_won / episodes_in_report)
+                # if FLAGS.task == 0:
+                #   experiment.log_metric(log_name='episode win rate', x=global_step, y=episode_won / episodes_in_report)
 
                 last_global_step = global_step
                 episode_return_sum = 0

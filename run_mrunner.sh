@@ -5,12 +5,12 @@ if [ "$#" -ne 1 ]; then
     exit 1
 fi
 
-source ../../venvs/py36_seedrl/bin/activate
+source /tmp/seed_test/bin/activate
 
 export NEPTUNE_PROJECT_NAME="do-not-be-hasty/tmp"
 
 ssh-add
-./basic_setup.sh plgmizaw sim2real2
+./basic_setup.sh plgloss sim2real2
 
 cd ..
 
@@ -20,5 +20,5 @@ fi
 
 echo "Run experiments"
 set -o xtrace
-mrunner --config /tmp/mrunner_config.yaml --context entropy_cpu run seed_rl/run_conf.py
+mrunner --config /tmp/mrunner_config.yaml --context eagle_cpu --time 59 --partition fast run seed_rl/run_conf_better.py
 set +o xtrace

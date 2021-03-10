@@ -11,7 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM marlgrid_base
+FROM marlgrid_base2
 #FROM tensorflow/tensorflow:2.3.0
 
 # Needed to disable interactive configuration by tzdata.
@@ -41,7 +41,7 @@ RUN apt-get update && apt-get install -y \
   wget
 
 WORKDIR /
-  
+
 RUN wget http://blzdistsc2-a.akamaihd.net/Linux/SC2.3.17.zip
 RUN unzip -P iagreetotheeula SC2.3.17.zip -d ~/
 RUN wget https://github.com/oxwhirl/smac/releases/download/v0.1-beta1/SMAC_Maps.zip
