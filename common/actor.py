@@ -54,19 +54,19 @@ def actor_loop(create_env_fn):
   """
 
   # TODO():
-  # project = neptune.init('do-not-be-hasty/matrace')
+  project = neptune.init('pmtest/marl-vtrace')
 
   if FLAGS.task == 0:
-    pass
+    # pass
     # TODO(implement me again):
-    # while True:
-    #   time.sleep(5)
-    #   experiments = project.get_experiments(tag=FLAGS.nonce)
-    #   if len(experiments) == 0:
-    #     logging.info('Experiment not found, retry...')
-    #   else:
-    #     experiment = experiments[-1]
-    #     break
+    while True:
+      time.sleep(5)
+      experiments = project.get_experiments(tag=FLAGS.nonce)
+      if len(experiments) == 0:
+        logging.info('Experiment not found, retry...')
+      else:
+        experiment = experiments[-1]
+        break
 
   env_batch_size = FLAGS.env_batch_size
   logging.info('Starting actor loop. Task: %r. Environment batch size: %r',
@@ -177,8 +177,8 @@ def actor_loop(create_env_fn):
                     (current_time - last_log_time),
                     episode_won / episodes_in_report)
                 tf.summary.scalar('episodes win rate', episode_won / episodes_in_report, step=global_step)
-                # if FLAGS.task == 0:
-                #   experiment.log_metric(log_name='episode win rate', x=global_step, y=episode_won / episodes_in_report)
+                if FLAGS.task == 0:
+                  experiment.log_metric(log_name='episode win rate', x=global_step, y=episode_won / episodes_in_report)
 
                 last_global_step = global_step
                 episode_return_sum = 0

@@ -89,6 +89,8 @@ def get_configuration(config_file,
   import cloudpickle
   import ast
   import logging
+  from absl import flags
+  FLAGS = flags.FLAGS
 
   # with_neptune might be also an id of an experiment
   global experiment_
@@ -148,7 +150,8 @@ def get_configuration(config_file,
       # Set pwd property with path to experiment.
       properties = {key: os.environ[key] for key in os.environ
                     if re.match(env_to_properties_regexp, key)}
-      neptune.create_experiment(name=experiment.name, tags=experiment.tags,
+      tags = experiment.tags + [FLAGS.nonce]
+      neptune.create_experiment(name=experiment.name, tags=tags,
                                 params=params, properties=properties,
                                 git_info=git_info)
 
