@@ -60,10 +60,9 @@ def main(argv):
 
     get_configuration(FLAGS.mrunner_config,
                       print_diagnostics=True, with_neptune=True,
-                      inject_parameters_to_FLAGS=True)
-    # TODO(): move this into get_configuration
-    neptune_tensorboard.integrate_with_tensorflow()
-
+                      inject_parameters_to_FLAGS=True,
+                      integrate_with_tensorboard=True
+                      )
     learner.learner_loop(env.create_environment,
                          create_agent,
                          create_optimizer)
@@ -78,7 +77,8 @@ def get_configuration(config_file,
         print_diagnostics=False, with_neptune=False,
         inject_parameters_to_gin=False, inject_parameters_to_FLAGS=False,
         nesting_prefixes=(),
-        env_to_properties_regexp=".*PWD"
+        env_to_properties_regexp=".*PWD",
+        integrate_with_tensorboard=False
 ):
   import argparse
   import datetime
@@ -91,6 +91,9 @@ def get_configuration(config_file,
   import logging
   from absl import flags
   FLAGS = flags.FLAGS
+
+  if config_file is None:
+    return {}
 
   # with_neptune might be also an id of an experiment
   global experiment_
@@ -158,6 +161,8 @@ def get_configuration(config_file,
       import atexit
       atexit.register(neptune.stop)
       experiment_ = neptune.get_experiment()
+      if integrate_with_tensorboard:
+        neptune_tensorboard.integrate_with_tensorflow()
 
   if type(with_neptune) == str:
     import neptune
