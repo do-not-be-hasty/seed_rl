@@ -21,6 +21,7 @@ from absl import flags
 from absl import logging
 import numpy as np
 from seed_rl import grpc
+from seed_rl.agents.vtrace.learner_dev import inference_funs
 from seed_rl.common import common_flags
 from seed_rl.common import env_wrappers
 from seed_rl.common import profiling
@@ -72,7 +73,7 @@ def actor_loop(create_env_fn):
     while True:
       try:
         # Client to communicate with the learner.
-        client = grpc.Client(FLAGS.server_address)
+        # client = grpc.Client(FLAGS.server_address)
 
         batched_env = env_wrappers.BatchedEnvironment(
             create_env_fn, env_batch_size, FLAGS.task * env_batch_size)
@@ -111,7 +112,8 @@ def actor_loop(create_env_fn):
           with elapsed_inference_s_timer:
             print("client inference start:", idxx)
             idxx += 1
-            action = client.inference(env_id, run_id, env_output, raw_reward)
+            action = inference_funs[0](env_id, run_id, env_output, raw_reward)
+            # action = client.inference(env_id, run_id, env_output, raw_reward)
           with timer_cls('actor/elapsed_env_step_s', 1000):
             observation, reward, done, info = batched_env.step(action.numpy())
           if is_rendering_enabled:
