@@ -13,7 +13,10 @@
 # limitations under the License.
 
 
-"""V-trace (IMPALA) learner for Google Research Football."""
+"""VTRACE devel setup
+
+Run me with: vtrace_main_dev.py --run_mode=actor --nonce=abc --logtostderr --pdb_post_mortem --inference_batch_size 1 --num_envs 1
+"""
 
 from absl import app
 from absl import flags
@@ -32,7 +35,6 @@ FLAGS = flags.FLAGS
 flags.DEFINE_float('learning_rate', 0.005, 'Learning rate.')
 flags.DEFINE_string('checkpoint', None, 'Checkpoint to visualize')
 flags.DEFINE_string('mrunner_config', None, 'Mrunner config file.')
-flags.DEFINE_bool('yield_mode', False, 'yield mode')
 
 
 def create_agent(unused_action_space, unused_env_observation_space,
