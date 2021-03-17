@@ -265,9 +265,7 @@ def learner_loop(create_env_fn, create_agent_fn, create_optimizer_fn):
 
   @tf.function
   def minimize(iterator):
-    tf.print("pre data")
     data = next(iterator)
-    tf.print("post data:")
 
     def compute_gradients(args):
       args = tf.nest.pack_sequence_as(unroll_specs[0], decode(args, data))
@@ -396,7 +394,7 @@ def learner_loop(create_env_fn, create_agent_fn, create_optimizer_fn):
             info_queue.enqueue_many(env_infos.read(done_ids))
           env_infos.reset(done_ids)
           env_infos.add(env_ids, (FLAGS.num_action_repeats, 0., 0.))
-          tf.print("inference function called =")
+
           # Inference.
           prev_actions = parametric_action_distribution.postprocess(
               actions.read(env_ids))
@@ -419,7 +417,6 @@ def learner_loop(create_env_fn, create_agent_fn, create_optimizer_fn):
           tf.print("Queue size1:", completed_ids, " ", unroll_queue.size())
           # tf.print("Queue size2:", unrolls)
           unroll_queue.enqueue_many(unrolls)
-          # tf.print("Queue size2:", unroll_queue.size())
           first_agent_states.replace(completed_ids,
                                      agent_states.read(completed_ids))
 
@@ -443,24 +440,18 @@ def learner_loop(create_env_fn, create_agent_fn, create_optimizer_fn):
 
   def dequeue(ctx):
     # Create batch (time major).
-    tf.print("_dequeue to happen")
     env_outputs = tf.nest.map_structure(lambda *args: tf.stack(args), *[
         unroll_queues[ctx.input_pipeline_id].dequeue()
         for i in range(ctx.get_per_replica_batch_size(FLAGS.batch_size))
     ])
-    tf.print("_dequeue done")
     env_outputs = env_outputs._replace(
         prev_actions=utils.make_time_major(env_outputs.prev_actions),
         env_outputs=utils.make_time_major(env_outputs.env_outputs),
         agent_outputs=utils.make_time_major(env_outputs.agent_outputs))
-    tf.print("_dequeue done2")
-    print("env_outputs:", env_outputs)
     env_outputs = env_outputs._replace(
         env_outputs=encode(env_outputs.env_outputs))
     # tf.data.Dataset treats list leafs as tensors, so we need to flatten and
     # repack.
-    tf.print("_dequeue done3")
-    # tf.print("env_outputs", env_outputs[1])
     return tf.nest.flatten(env_outputs)
 
   def dataset_fn(ctx):
@@ -505,8 +496,7 @@ def learner_loop(create_env_fn, create_agent_fn, create_optimizer_fn):
       tf.saved_model.save(agent, os.path.join(FLAGS.logdir, 'saved_model'))
       last_ckpt_time = current_time
 
-    if FLAGS.yield_mode:
-      yield 1
+    yield 1
     print("About to minimize")
     minimize(it)
     print("minimize done")
