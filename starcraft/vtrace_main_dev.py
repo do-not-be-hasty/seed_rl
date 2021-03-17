@@ -49,6 +49,8 @@ def create_optimizer(unused_final_iteration):
 
 
 def main(argv):
+  tf.config.run_functions_eagerly(True)
+
   actor_iterator0 = actor.actor_loop(env.create_environment)
   learner_iterator = learner.learner_loop(env.create_environment,
                                           create_agent, create_optimizer)
