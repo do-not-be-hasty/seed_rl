@@ -6,7 +6,7 @@ die () {
     exit 1
 }
 
-ENVIRONMENTS="atari|dmlab|football|marlgrid|particles"
+ENVIRONMENTS="atari|dmlab|football|marlgrid|particles|starcraft"
 AGENTS="r2d2|vtrace|sac"
 
 echo $1 | grep -E -q $ENVIRONMENTS || die "Supported games: $ENVIRONMENTS"

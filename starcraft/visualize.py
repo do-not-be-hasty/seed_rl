@@ -99,7 +99,7 @@ def visualize(create_env_fn, create_agent_fn, create_optimizer_fn):
 
   if True:
     ckpt = tf.train.Checkpoint(agent=agent, optimizer=optimizer)
-    ckpt.restore('seed_rl/checkpoints/debug/ckpt-4').assert_consumed()
+    ckpt.restore('seed_rl/checkpoints/agent_good_3m/ckpt-9').assert_consumed()
 
   def get_agent_action(obs):
     initial_agent_state = agent.initial_state(1)
@@ -115,15 +115,15 @@ def visualize(create_env_fn, create_agent_fn, create_optimizer_fn):
     mode = None
     obs = env.reset()
     rewards = []
-    env.render(mode=mode)
+    # env.render(mode=mode)
 
     for _ in range(steps):
       agent_out, state = get_agent_action(obs)
       action = agent_out.action.numpy()[0]
       obs, rew, done, info = env.step(action)
       rewards.append(rew)
-      time.sleep(0.01)
-      env.render(mode=mode)
+      # time.sleep(0.01)
+      # env.render(mode=mode)
       if done:
         break
 
@@ -132,11 +132,17 @@ def visualize(create_env_fn, create_agent_fn, create_optimizer_fn):
     return reward
 
   all_rewards = []
+  iter = 0
+
   while True:
-    all_rewards.append(run_episode(25))
+    all_rewards.append(run_episode(250))
     if len(all_rewards) > 1000:
       all_rewards = all_rewards[-1000:]
     print('mean cum reward: {0}'.format(np.mean(all_rewards)))
+    if iter % 10 == 0:
+      env.save_replay()
+      print('\n REPLAY SAVED\n')
+    iter += 1
 
   print('Graceful termination')
   sys.exit(0)

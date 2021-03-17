@@ -27,7 +27,7 @@ from smac.env import StarCraft2Env
 
 def create_environment(_):
   """Returns a starcraft environment."""
-  task = '3s5z'
+  task = '3m'
 
   logging.info('Creating environment: %s', task)
   env = StarCraft2Env(map_name=task)

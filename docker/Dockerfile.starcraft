@@ -42,8 +42,8 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /
   
-RUN wget http://blzdistsc2-a.akamaihd.net/Linux/SC2.3.17.zip
-RUN unzip -P iagreetotheeula SC2.3.17.zip -d ~/
+RUN wget http://blzdistsc2-a.akamaihd.net/Linux/SC2.4.10.zip
+RUN unzip -P iagreetotheeula SC2.4.10.zip -d ~/
 RUN wget https://github.com/oxwhirl/smac/releases/download/v0.1-beta1/SMAC_Maps.zip
 RUN unzip SMAC_Maps.zip -d ~/StarCraftII/Maps/
 

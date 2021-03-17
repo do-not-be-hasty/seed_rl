@@ -372,6 +372,8 @@ class SCWrapper(gym.Env):
     # print('true actions', true_actions)
     return true_actions
 
+  def save_replay(self):
+    return self.env.save_replay()
 
   def _convert_reward(self, reward):
     return np.sum(reward)
