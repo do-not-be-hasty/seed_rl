@@ -53,21 +53,6 @@ def actor_loop(create_env_fn):
       newly created environment.
   """
 
-  # # TODO():
-  # project = neptune.init('pmtest/marl-vtrace')
-  #
-  # if FLAGS.task == 0:
-  #   # pass
-  #   # TODO(implement me again):
-  #   while True:
-  #     time.sleep(5)
-  #     experiments = project.get_experiments(tag=FLAGS.nonce)
-  #     if len(experiments) == 0:
-  #       logging.info('Experiment not found, retry...')
-  #     else:
-  #       experiment = experiments[-1]
-  #       break
-
   env_batch_size = FLAGS.env_batch_size
   logging.info('Starting actor loop. Task: %r. Environment batch size: %r',
                FLAGS.task, env_batch_size)
@@ -88,7 +73,6 @@ def actor_loop(create_env_fn):
       try:
         # Client to communicate with the learner.
         client = grpc.Client(FLAGS.server_address)
-        print("client binded")
 
         batched_env = env_wrappers.BatchedEnvironment(
             create_env_fn, env_batch_size, FLAGS.task * env_batch_size)
@@ -122,20 +106,14 @@ def actor_loop(create_env_fn):
           tf.summary.experimental.set_step(actor_step)
           env_output = utils.EnvOutput(reward, done, observation,
                                        abandoned, episode_step)
-          if FLAGS.yield_mode:
-            yield 2
+
+          yield 2
           with elapsed_inference_s_timer:
-            import time
-            # time.sleep(0.1)
             print("client inference start:", idxx)
             idxx += 1
             action = client.inference(env_id, run_id, env_output, raw_reward)
-            # print("client inference done")
-
           with timer_cls('actor/elapsed_env_step_s', 1000):
             observation, reward, done, info = batched_env.step(action.numpy())
-            # if episode_step[0]==3:
-            #   done[0] = True
           if is_rendering_enabled:
             batched_env.render()
           for i in range(env_batch_size):
@@ -166,7 +144,6 @@ def actor_loop(create_env_fn):
                                              np.array([False]), episode_step)
                 with elapsed_inference_s_timer:
                   # action is ignored
-                  print("abandoned inference")
                   client.inference(env_id, run_id, env_output, raw_reward)
                 reward[i] = 0.0
                 raw_reward[i] = 0.0
@@ -190,8 +167,6 @@ def actor_loop(create_env_fn):
                     (current_time - last_log_time),
                     episode_won / episodes_in_report)
                 tf.summary.scalar('episodes win rate', episode_won / episodes_in_report, step=global_step)
-                # if FLAGS.task == 0:
-                #   experiment.log_metric(log_name='episode win rate', x=global_step, y=episode_won / episodes_in_report)
 
                 last_global_step = global_step
                 episode_return_sum = 0
