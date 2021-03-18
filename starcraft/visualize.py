@@ -106,7 +106,6 @@ def visualize(create_env_fn, create_agent_fn, create_optimizer_fn):
     shaped_obs = tf.reshape(tf.convert_to_tensor(obs), shape=(1,)+env.observation_space.shape)
     initial_env_output = (tf.constant([1.]), tf.constant([False]), shaped_obs,
                           tf.constant([False]), tf.constant([1], dtype=tf.float32),)
-    # __call__(self, prev_actions, env_outputs, core_state, unroll=False, is_training=False, postprocess_action=True)
     agent_out = agent(tf.zeros([0], dtype=tf.float32), initial_env_output,
                       initial_agent_state)
     return agent_out

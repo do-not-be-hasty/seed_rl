@@ -40,7 +40,7 @@ flags.DEFINE_string('checkpoint', None, 'Checkpoint to visualize')
 
 def create_agent(unused_action_space, unused_env_observation_space,
                  parametric_action_distribution):
-  return networks.GFootball(parametric_action_distribution)
+  return networks.StarcraftAgentNetwork(parametric_action_distribution)
 
 
 def create_optimizer(unused_final_iteration):
@@ -55,10 +55,6 @@ def main(argv):
   if FLAGS.run_mode == 'actor':
     actor.actor_loop(env.create_environment)
   elif FLAGS.run_mode == 'learner':
-    # params = get_configuration(print_diagnostics=True,
-    #                            with_neptune=True)
-    # print(params)
-    # ajsgdhasjd
     neptune.init('do-not-be-hasty/matrace')
     neptune.create_experiment(tags=[FLAGS.nonce])
     neptune_tensorboard.integrate_with_tensorflow()

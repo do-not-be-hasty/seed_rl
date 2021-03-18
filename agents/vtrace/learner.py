@@ -276,8 +276,8 @@ def learner_loop(create_env_fn, create_agent_fn, create_optimizer_fn):
       norms = []
       for t, g in zip(temp_grads, grads):
         norms.append(tf.norm(g))
-        # t.assign(tf.clip_by_norm(g, 1.))  # clipping
         t.assign(g)
+        # t.assign(tf.clip_by_norm(g, 1.))  # clipping, enable if wnated
       logger.log(logs, 'gradient norm', tf.reduce_max(norms))
       return loss, logs
 

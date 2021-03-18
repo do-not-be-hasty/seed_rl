@@ -67,29 +67,18 @@ class _Stack(tf.Module):
 class SimpleNetwork(tf.Module):
   def __init__(self):
     super().__init__()
-    # self.conv0 = tf.keras.layers.Conv2D(16, 2, activation='relu')
-    # self.conv1 = tf.keras.layers.Conv2D(32, 2, activation='relu')
-    # self.flatten = tf.keras.layers.Flatten()
     self.layer0 = tf.keras.layers.Dense(64, activation='relu')
     self.layer1 = tf.keras.layers.Dense(64, activation='relu')
 
   def eval(self, input):
-    # x = self.conv0(input)
-    # x = self.conv1(x)
-    # x = self.flatten(x)
     x = self.layer0(input)
     x = self.layer1(x)
     return x
 
 
-class GFootball(tf.Module):
-  """Agent with ResNet, but without LSTM and additional inputs.
-
-  Four blocks instead of three in ImpalaAtariDeep.
-  """
-
+class StarcraftAgentNetwork(tf.Module):
   def __init__(self, parametric_action_distribution):
-    super(GFootball, self).__init__(name='gfootball')
+    super(StarcraftAgentNetwork, self).__init__(name='starcraft_agent')
 
     # Parameters and layers for unroll.
     self._parametric_action_distribution = parametric_action_distribution
@@ -117,35 +106,40 @@ class GFootball(tf.Module):
   def _torso(self, unused_prev_action, env_output):
     _, _, frame_and_actions, _, _ = env_output
 
-    # tf.print('f_and_a', frame_and_actions)
+    # Divide the environment output onto observations and available actions.
     # frame, avail_actions = frame_and_actions
-    frame = tf.stack([frame_and_actions[:, i, :-self.num_actions] for i in range(self.num_agents)], axis=1)
-    self.avail_actions = tf.concat([frame_and_actions[:, i, -self.num_actions:] for i in range(self.num_agents)], axis=1)
-    # tf.print('frame', frame.shape, frame)
-    # print('single frame', frame[:, 0])
-    # tf.print('avail actions', avail_actions)
+    frame = tf.stack([
+      frame_and_actions[:, i, :-self.num_actions]
+      for i in range(self.num_agents)
+    ], axis=1)
 
-    baseline_output = self.critic.eval(tf.concat([frame[:, i] for i in range(self.num_agents)], axis=-1))
-    policy_outputs = [self.actor.eval(frame[:, i]) for i in range(self.num_agents)]
+    self.avail_actions = tf.concat([
+      frame_and_actions[:, i, -self.num_actions:]
+      for i in range(self.num_agents)
+    ], axis=1)
+
+    baseline_output = self.critic.eval(
+      tf.concat([frame[:, i] for i in range(self.num_agents)], axis=-1))
+    policy_outputs = [
+      self.actor.eval(frame[:, i]) for i in range(self.num_agents)]
 
     return tf.stack(policy_outputs + [baseline_output], axis=1)
 
   def _head(self, core_output):
-    # print('core output', core_output.shape, core_output)
-    policy_logits = tf.concat([self._policy_logits(core_output[:, i]) for i in range(self.num_agents)], axis=-1)
-    # tf.print('policy_logits', policy_logits, summarize=-1)
-    # tf.print('avail_actions', self.avail_actions, summarize=-1)
-    policy_logits = tf.maximum(policy_logits, -50) * self.avail_actions - (1 - self.avail_actions) * 100
-    # tf.print('final_logits', policy_logits, summarize=-1)
-    # tf.print('shapes', policy_logits.shape, self.avail_actions.shape)
+    policy_logits = tf.concat([
+      self._policy_logits(core_output[:, i]) for i in range(self.num_agents)
+    ], axis=-1)
+    # Policy can choose only available actions.
+    # Set logits for all non-available actions to -100.
+    # In order to prevent other logits going too low, clip them to -50.
+    policy_logits = tf.maximum(policy_logits, -50) * self.avail_actions - \
+                    (1 - self.avail_actions) * 100
 
+    # Output of baseline torso is the last row.
     baseline_input = self.final_flatten(core_output[:, self.num_agents])
     baseline = tf.squeeze(self._baseline(baseline_input), axis=-1)
-    # print('baseline', baseline)
 
-    # Sample an action from the policy.
     new_action = self._parametric_action_distribution.sample(policy_logits)
-    # print('new_action', new_action)
 
     return AgentOutput(new_action, policy_logits, baseline)
 

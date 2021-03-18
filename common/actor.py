@@ -21,7 +21,7 @@ from absl import flags
 from absl import logging
 import numpy as np
 from seed_rl import grpc
-from seed_rl.common import common_flags  
+from seed_rl.common import common_flags
 from seed_rl.common import env_wrappers
 from seed_rl.common import profiling
 from seed_rl.common import utils
@@ -56,6 +56,7 @@ def actor_loop(create_env_fn):
   project = neptune.init('do-not-be-hasty/matrace')
 
   if FLAGS.task == 0:
+    # First actor logs winning rate.
     while True:
       time.sleep(5)
       experiments = project.get_experiments(tag=FLAGS.nonce)
@@ -166,16 +167,21 @@ def actor_loop(create_env_fn):
               if current_time - last_log_time > 30:
                 logging.info(
                     'Actor steps: %i, Return: %f Raw return: %f '
-                    'Episode steps: %f, Speed: %f steps/s, Won: %.2f', global_step,
+                    'Episode steps: %f, Speed: %f steps/s, Won: %.2f',
+                    global_step,
                     episode_return_sum / episodes_in_report,
                     episode_raw_return_sum / episodes_in_report,
                     episode_step_sum / episodes_in_report,
                     (global_step - last_global_step) /
                     (current_time - last_log_time),
                     episode_won / episodes_in_report)
-                tf.summary.scalar('episodes win rate', episode_won / episodes_in_report, step=global_step)
+                tf.summary.scalar('episodes win rate',
+                                  episode_won / episodes_in_report,
+                                  step=global_step)
                 if FLAGS.task == 0:
-                  experiment.log_metric(log_name='episode win rate', x=global_step, y=episode_won / episodes_in_report)
+                  experiment.log_metric(log_name='episode win rate',
+                                        x=global_step,
+                                        y=episode_won / episodes_in_report)
 
                 last_global_step = global_step
                 episode_return_sum = 0

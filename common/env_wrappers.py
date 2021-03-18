@@ -331,9 +331,13 @@ class SCWrapper(gym.Env):
     info = self.env.get_env_info()
     self.num_agents = info['n_agents']
 
-    self.action_space = gym.spaces.MultiDiscrete([info['n_actions'] for _ in range(self.num_agents)])
+    self.action_space = gym.spaces.MultiDiscrete(
+                            [info['n_actions'] for _ in range(self.num_agents)])
 
-    self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(info['n_agents'], info['obs_shape'] + info['n_actions']))
+    self.observation_space = gym.spaces.Box(
+      low=-np.inf,
+      high=np.inf,
+      shape=(info['n_agents'], info['obs_shape'] + info['n_actions']))
     self.observation_space.dtype = np.float32
 
     print(self.action_space, self.observation_space)
@@ -353,25 +357,32 @@ class SCWrapper(gym.Env):
     return self.env.render(mode)
 
   def _convert_observation(self, obs):
-    return np.stack([np.concatenate([self.normalization(obs[i]), self.env.get_avail_agent_actions(i)]) for i in range(self.num_agents)], axis=0).astype(np.float32)
+    # Prepare raw observation for agent network.
+    # Add information about available actions.
+    return np.stack([
+      np.concatenate([
+        self.normalization(obs[i]), self.env.get_avail_agent_actions(i)
+      ]) for i in range(self.num_agents)
+    ], axis=0).astype(np.float32)
 
   def _convert_action(self, action):
+    # Ensure the executed action is available.
+    # Currently all the actions are chosen from availables only and thus no
+    # invalidity should be detected here.
     true_actions = []
-    # print('init action', action)
+
     for i in range(self.num_agents):
       a = action[i]
       avail_actions = self.env.get_avail_agent_actions(i)
       if avail_actions[a] == 0:
-      # if True:
-        print('invalid action')
+        # Should never be true.
+        print('Invalid action. This is undesired that you see this message.',
+              'Likely a bug in action choice logic.')
         avail_actions_ind = np.nonzero(avail_actions)[0]
         a = np.random.choice(avail_actions_ind)
       true_actions.append(a)
-      # print('info', i, a, avail_actions)
 
-    # print('true actions', true_actions)
     return true_actions
-
 
   def _convert_reward(self, reward):
     return np.sum(reward)
