@@ -88,13 +88,15 @@ class GFootball(tf.Module):
   Four blocks instead of three in ImpalaAtariDeep.
   """
 
-  def __init__(self, parametric_action_distribution):
+  def __init__(self, parametric_action_distribution, info):
     super(GFootball, self).__init__(name='gfootball')
 
     # Parameters and layers for unroll.
     self._parametric_action_distribution = parametric_action_distribution
     self.num_agents = parametric_action_distribution._n_dimensions
     self.num_actions = parametric_action_distribution._n_actions_per_dim
+
+    self.state_dim = info['state_dim']
 
     self.avail_actions = None
 
@@ -115,17 +117,19 @@ class GFootball(tf.Module):
     return ()
 
   def _torso(self, unused_prev_action, env_output):
-    _, _, frame_and_actions, _, _ = env_output
+    _, _, frame_and_actions_and_state, _, _ = env_output
 
     # tf.print('f_and_a', frame_and_actions)
-    # frame, avail_actions = frame_and_actions
+    # frame, avail_actions, state = frame_and_actions_and state
+    state = frame_and_actions_and_state[:, 0, -self.state_dim:]
+    frame_and_actions = frame_and_actions_and_state[:, :, :-self.state_dim]
     frame = tf.stack([frame_and_actions[:, i, :-self.num_actions] for i in range(self.num_agents)], axis=1)
     self.avail_actions = tf.concat([frame_and_actions[:, i, -self.num_actions:] for i in range(self.num_agents)], axis=1)
     # tf.print('frame', frame.shape, frame)
     # print('single frame', frame[:, 0])
     # tf.print('avail actions', avail_actions)
 
-    baseline_output = self.critic.eval(tf.concat([frame[:, i] for i in range(self.num_agents)], axis=-1))
+    baseline_output = self.critic.eval(state)
     policy_outputs = [self.actor.eval(frame[:, i]) for i in range(self.num_agents)]
 
     return tf.stack(policy_outputs + [baseline_output], axis=1)

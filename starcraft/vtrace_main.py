@@ -40,7 +40,8 @@ flags.DEFINE_string('checkpoint', None, 'Checkpoint to visualize')
 
 def create_agent(unused_action_space, unused_env_observation_space,
                  parametric_action_distribution):
-  return networks.GFootball(parametric_action_distribution)
+  environment = env.create_environment(0)
+  return networks.GFootball(parametric_action_distribution, {'state_dim': environment.state_dim})
 
 
 def create_optimizer(unused_final_iteration):

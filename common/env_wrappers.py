@@ -333,10 +333,12 @@ class SCWrapper(gym.Env):
 
     self.action_space = gym.spaces.MultiDiscrete([info['n_actions'] for _ in range(self.num_agents)])
 
-    self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(info['n_agents'], info['obs_shape'] + info['n_actions']))
+    self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(info['n_agents'], info['obs_shape'] + info['n_actions'] + info['state_shape']))
     self.observation_space.dtype = np.float32
 
-    print(self.action_space, self.observation_space)
+    self.state_dim = info['state_shape']
+
+    print(self.action_space, self.observation_space, 'state size:', self.state_dim)
 
   def reset(self):
     self.env.reset()
@@ -353,7 +355,7 @@ class SCWrapper(gym.Env):
     return self.env.render(mode)
 
   def _convert_observation(self, obs):
-    return np.stack([np.concatenate([self.normalization(obs[i]), self.env.get_avail_agent_actions(i)]) for i in range(self.num_agents)], axis=0).astype(np.float32)
+    return np.stack([np.concatenate([self.normalization(obs[i]), self.env.get_avail_agent_actions(i), self.env.get_state()]) for i in range(self.num_agents)], axis=0).astype(np.float32)
 
   def _convert_action(self, action):
     true_actions = []
