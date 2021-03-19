@@ -35,7 +35,7 @@ def from_importance_weights(
     target_action_log_probs, behaviour_action_log_probs,
     discounts, rewards, values, bootstrap_value,
     clip_rho_threshold=1.0, clip_pg_rho_threshold=1.0, lambda_=1.0,
-    name='vtrace_from_importance_weights', logger=None):
+    is_weights_scale=1.0, name='vtrace_from_importance_weights', logger=None):
   r"""V-trace from log importance weights.
 
   Calculates V-trace actor critic targets as described in
@@ -107,7 +107,7 @@ def from_importance_weights(
     clip_pg_rho_threshold.shape.assert_has_rank(0)
 
   with tf.name_scope(name):
-    rhos = tf.exp(log_rhos)
+    rhos = tf.exp(log_rhos * is_weights_scale)
     if clip_rho_threshold is not None:
       clipped_rhos = tf.minimum(clip_rho_threshold, rhos, name='clipped_rhos')
     else:

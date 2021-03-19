@@ -24,7 +24,7 @@ from absl import flags
 from absl import logging
 
 from seed_rl import grpc
-from seed_rl.common import common_flags  
+from seed_rl.common import common_flags
 from seed_rl.common import utils
 from seed_rl.common import vtrace
 from seed_rl.common.parametric_distribution import get_parametric_distribution_for_action_space
@@ -60,6 +60,9 @@ flags.DEFINE_float('lambda_', 1., 'Lambda.')
 flags.DEFINE_float('max_abs_reward', 0.,
                    'Maximum absolute reward when calculating loss.'
                    'Use 0. to disable clipping.')
+flags.DEFINE_float('is_weights_scale', 1.0, 'Weighting of IS weights')
+flags.DEFINE_float('clip_pg_rho_threshold', 1.0, 'Weighting of IS weights')
+flags.DEFINE_float('clip_rho_threshold', 1.0, 'Weighting of IS weights')
 
 # Logging
 flags.DEFINE_integer('log_batch_frequency', 100, 'We average that many batches '
@@ -113,7 +116,11 @@ def compute_loss(logger, parametric_action_distribution, agent, agent_state,
       values=learner_outputs.baseline,
       bootstrap_value=bootstrap_value,
       lambda_=FLAGS.lambda_,
-      logger=(logger, session))
+      logger=(logger, session),
+      is_weights_scale=FLAGS.is_weights_scale,
+      clip_rho_threshold=FLAGS.clip_rho_threshold,
+      clip_pg_rho_threshold=FLAGS.clip_pg_rho_threshold
+  )
 
   # Policy loss based on Policy Gradients
   policy_loss = -tf.reduce_mean(target_action_log_probs *
@@ -252,8 +259,8 @@ def learner_loop(create_env_fn, create_agent_fn, create_optimizer_fn):
 
 
     iterations = optimizer.iterations
-    optimizer._create_hypers()  
-    optimizer._create_slots(agent.trainable_variables)  
+    optimizer._create_hypers()
+    optimizer._create_slots(agent.trainable_variables)
 
     # ON_READ causes the replicated variable to act as independent variables for
     # each replica.
