@@ -20,5 +20,5 @@ fi
 
 echo "Run experiments"
 set -o xtrace
-mrunner --config /tmp/mrunner_config.yaml --context entropy_cpu run seed_rl/run_conf.py
+mrunner --config /tmp/mrunner_config.yaml --context entropy_cpu run seed_rl/run_conf_better_grid.py
 set +o xtrace

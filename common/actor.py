@@ -53,7 +53,7 @@ def actor_loop(create_env_fn):
       newly created environment.
   """
 
-  project = neptune.init('do-not-be-hasty/matrace')
+  project = neptune.init('pmtest/marl-vtrace')
 
   if FLAGS.task == 0:
     # First actor logs winning rate.

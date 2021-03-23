@@ -21,6 +21,8 @@ die () {
 echo "run begins"
 pwd
 
+EXPDIR=`pwd`
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd $DIR
 
@@ -29,7 +31,8 @@ echo "in DIR"
 ENVIRONMENT=$1
 AGENT=$2
 NUM_ACTORS=$3
-shift 3
+MRUNER_CONFIG=$5
+shift 5
 
 echo "args read"
 
@@ -42,7 +45,6 @@ echo "PYTHONPATH updated"
 #source /home/mizaw/venvs/py38_seedrl/bin/activate
 
 export PYTHONPATH=$PYTHONPATH:/
-export NEPTUNE_API_TOKEN="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vdWkubmVwdHVuZS5haSIsImFwaV91cmwiOiJodHRwczovL3VpLm5lcHR1bmUuYWkiLCJhcGlfa2V5IjoiZTE4NTY4ZmMtYzMzNy00ODQ0LTgxMDAtN2Q5MjY1ZDU0NWYwIn0="
 
 NONCE=id$RANDOM$RANDOM$RANDOM
 
@@ -52,8 +54,8 @@ export NEPTUNE_PROJECT_NAME="do-not-be-hasty/tmp"
 
 SERVER_ADDRESS="localhost:$((49152 + RANDOM % (65535 - 49152)))"
 
-ACTOR_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=actor --nonce=${NONCE} --server_address=$SERVER_ADDRESS";
-LEARNER_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=learner --nonce=${NONCE} --server_address=$SERVER_ADDRESS";
+ACTOR_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=actor --nonce=${NONCE} --server_address=$SERVER_ADDRESS --mrunner_config=$EXPDIR/$MRUNER_CONFIG";
+LEARNER_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=learner --nonce=${NONCE} --server_address=$SERVER_ADDRESS --mrunner_config=$EXPDIR/$MRUNER_CONFIG";
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 echo "running..."

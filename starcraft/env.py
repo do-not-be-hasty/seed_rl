@@ -25,9 +25,15 @@ from seed_rl.starcraft import observation
 
 from smac.env import StarCraft2Env
 
+FLAGS = flags.FLAGS
+
+# Environment settings.
+flags.DEFINE_string('task_name', '3s5z', 'Task name.')
+
+
 def create_environment(_):
   """Returns a starcraft environment."""
-  task = '3s5z'
+  task = FLAGS.task_name
 
   logging.info('Creating environment: %s', task)
   env = StarCraft2Env(map_name=task)
