@@ -7,9 +7,9 @@
      requirements_file: resources/requirements.txt
      modules_to_load:
      - plgrid/tools/singularity/stable
-     time: 4320
-     cpu: 12
-     mem: 30G
+     time: 1000
+     cpu: 20
+     mem: 60G
      slurm_url: plgmizaw@pro.cyfronet.pl
      storage_dir: /net/archive/groups/plggluna/plgmizaw
      singularity_container: /net/people/plgmizaw/singularity/starcraft_cpu_2.sif
@@ -20,12 +20,12 @@
      cmd_type: sbatch
      partition: standard
      requirements_file: resources/requirements.txt
-     time: 4320
-     cpu: 12
-     mem: 30G
+     time: 1000
+     cpu: 20
+     mem: 60G
      slurm_url: plgmizaw@eagle.man.poznan.pl
      storage_dir: /home/plgrid/plgmizaw/experiments
-     singularity_container: -H $PWD:/homeplaceholder -B /home/plgrid/plgmizaw/StarCraftII/:/homeplaceholder/StarCraftII --env NEPUNEPWD=$PWD /home/plgrid/plgmizaw/singularity/starcraft_cpu_2.sif
+     singularity_container: -H $PWD:/homeplaceholder -B /home/plgrid/plgmizaw/StarCraftII/:/homeplaceholder/StarCraftII -B $PWD/seed_rl/output_dir:/tmp/ --env NEPUNEPWD=$PWD /home/plgrid/plgmizaw/singularity/starcraft_cpu_2.sif
      
    entropy_starcraft:
      account: students
@@ -47,9 +47,9 @@
      account: students
      backend_type: slurm
      cmd_type: sbatch
-     cpu: 12
+     cpu: 24
      gpu: 0
-     mem: 30G
+     mem: 80G
      nodes: 1
      ntasks: 1
      partition: common
@@ -57,7 +57,7 @@
      slurm_url: mizaw@entropy.mimuw.edu.pl
      storage_dir: /home/mizaw/experiments/storage
      singularity_container: /home/pmilos/starcraft_cpu_2.sif
-     time: 4320
+     time: 1000
 
    test_kube:
      backend_type: kubernetes

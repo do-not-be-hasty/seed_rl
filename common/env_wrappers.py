@@ -337,10 +337,12 @@ class SCWrapper(gym.Env):
     self.observation_space = gym.spaces.Box(
       low=-np.inf,
       high=np.inf,
-      shape=(info['n_agents'], info['obs_shape'] + info['n_actions']))
+      shape=(info['n_agents'], info['obs_shape'] + info['n_actions'] + info['state_shape']))
     self.observation_space.dtype = np.float32
 
-    print(self.action_space, self.observation_space)
+    self.state_dim = info['state_shape']
+
+    print(self.action_space, self.observation_space, 'state size:', self.state_dim)
 
   def reset(self):
     self.env.reset()
@@ -361,7 +363,9 @@ class SCWrapper(gym.Env):
     # Add information about available actions.
     return np.stack([
       np.concatenate([
-        self.normalization(obs[i]), self.env.get_avail_agent_actions(i)
+        self.normalization(obs[i]),
+        self.env.get_avail_agent_actions(i),
+        self.env.get_state(),
       ]) for i in range(self.num_agents)
     ], axis=0).astype(np.float32)
 
@@ -383,6 +387,9 @@ class SCWrapper(gym.Env):
       true_actions.append(a)
 
     return true_actions
+
+  def save_replay(self):
+    return self.env.save_replay()
 
   def _convert_reward(self, reward):
     return np.sum(reward)

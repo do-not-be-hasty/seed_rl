@@ -28,7 +28,7 @@ from smac.env import StarCraft2Env
 FLAGS = flags.FLAGS
 
 # Environment settings.
-flags.DEFINE_string('task_name', '3s5z', 'Task name.')
+flags.DEFINE_string('task_name', '3m', 'Task name.')
 
 
 def create_environment(_):

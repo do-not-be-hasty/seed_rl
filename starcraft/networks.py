@@ -77,13 +77,15 @@ class SimpleNetwork(tf.Module):
 
 
 class StarcraftAgentNetwork(tf.Module):
-  def __init__(self, parametric_action_distribution):
+  def __init__(self, parametric_action_distribution, info):
     super(StarcraftAgentNetwork, self).__init__(name='starcraft_agent')
 
     # Parameters and layers for unroll.
     self._parametric_action_distribution = parametric_action_distribution
     self.num_agents = parametric_action_distribution._n_dimensions
     self.num_actions = parametric_action_distribution._n_actions_per_dim
+
+    self.state_dim = info['state_dim']
 
     self.avail_actions = None
 
@@ -104,10 +106,13 @@ class StarcraftAgentNetwork(tf.Module):
     return ()
 
   def _torso(self, unused_prev_action, env_output):
-    _, _, frame_and_actions, _, _ = env_output
+    _, _, frame_and_actions_and_state, _, _ = env_output
 
     # Divide the environment output onto observations and available actions.
-    # frame, avail_actions = frame_and_actions
+    # frame, avail_actions, state = frame_and_actions_and_state
+    state = frame_and_actions_and_state[:, 0, -self.state_dim:]
+    frame_and_actions = frame_and_actions_and_state[:, :, :-self.state_dim]
+
     frame = tf.stack([
       frame_and_actions[:, i, :-self.num_actions]
       for i in range(self.num_agents)
@@ -118,8 +123,7 @@ class StarcraftAgentNetwork(tf.Module):
       for i in range(self.num_agents)
     ], axis=1)
 
-    baseline_output = self.critic.eval(
-      tf.concat([frame[:, i] for i in range(self.num_agents)], axis=-1))
+    baseline_output = self.critic.eval(state)
     policy_outputs = [
       self.actor.eval(frame[:, i]) for i in range(self.num_agents)]
 

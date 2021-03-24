@@ -45,6 +45,11 @@ def are_summaries_enabled():
   return FLAGS.task < FLAGS.num_actors_with_summaries
 
 
+class DummyExperiment:
+    def log_metric(self, log_name, x, y):
+        pass
+
+
 def actor_loop(create_env_fn):
   """Main actor loop.
 
@@ -54,8 +59,9 @@ def actor_loop(create_env_fn):
   """
 
   project = neptune.init('pmtest/marl-vtrace')
+  experiment = DummyExperiment()
 
-  if FLAGS.task == 0:
+  if FLAGS.task == 0 and not FLAGS.is_local:
     # First actor logs winning rate.
     while True:
       time.sleep(5)

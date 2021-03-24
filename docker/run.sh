@@ -33,8 +33,8 @@ NONCE=id00
 
 export NEPTUNE_PROJECT_NAME="do-not-be-hasty/local"
 
-ACTOR_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=actor --nonce=${NONCE}";
-LEARNER_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=learner --nonce=${NONCE}";
+ACTOR_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_better_main.py --run_mode=actor --nonce=${NONCE} --is_local=True";
+LEARNER_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_better_main.py --run_mode=learner --nonce=${NONCE} --is_local=True";
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 tmux new-session -d -t seed_rl

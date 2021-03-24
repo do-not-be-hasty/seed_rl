@@ -43,3 +43,6 @@ flags.DEFINE_integer(
 flags.DEFINE_integer('num_envs', 4,
                      'Total number of environments in all actors.')
 flags.DEFINE_integer('num_action_repeats', 1, 'Number of action repeats.')
+
+flags.DEFINE_bool('is_local', False,
+                  'Whether the program is running locally.')
