@@ -65,14 +65,28 @@ class _Stack(tf.Module):
 
 
 class SimpleNetwork(tf.Module):
-  def __init__(self):
+  def __init__(self, use_norm=False):
     super().__init__()
-    self.layer0 = tf.keras.layers.Dense(64, activation='relu')
-    self.layer1 = tf.keras.layers.Dense(64, activation='relu')
+    self.use_norm = use_norm
+
+    self.layer0 = tf.keras.layers.Dense(64, activation=None)
+    if self.use_norm:
+      self.norm0  = tf.keras.layers.LayerNormalization()
+    self.act0   = tf.keras.layers.ReLU()
+    self.layer1 = tf.keras.layers.Dense(64, activation=None)
+    if self.use_norm:
+      self.norm1  = tf.keras.layers.LayerNormalization()
+    self.act1   = tf.keras.layers.ReLU()
 
   def eval(self, input):
     x = self.layer0(input)
+    if self.use_norm:
+      x = self.norm0(x)
+    x = self.act0(x)
     x = self.layer1(x)
+    if self.use_norm:
+      x = self.norm1(x)
+    x = self.act1(x)
     return x
 
 
