@@ -72,6 +72,15 @@ def actor_loop(create_env_fn):
         experiment = experiments[-1]
         break
 
+  log_period = 5
+  log_period_growth = 1.05
+  log_period_max = 600
+
+  last_replay_time = timeit.default_timer()
+  replay_period = 600
+  replay_period_growth = 1.2
+  replay_period_max = 3600
+
   env_batch_size = FLAGS.env_batch_size
   logging.info('Starting actor loop. Task: %r. Environment batch size: %r',
                FLAGS.task, env_batch_size)
@@ -170,7 +179,16 @@ def actor_loop(create_env_fn):
               global_step += episode_step[i]
               episode_won += (info[i] or {}).get('battle_won', False)
               episodes_in_report += 1
-              if current_time - last_log_time > 30:
+
+              if FLAGS.task == 0 and \
+                      current_time - last_replay_time > replay_period:
+                  replay_period = min(replay_period_max,
+                                      replay_period * replay_period_growth)
+                  last_replay_time = current_time
+                  batched_env.envs[0].save_replay()
+
+              if current_time - last_log_time > log_period:
+                log_period = min(log_period_max, log_period * log_period_growth)
                 logging.info(
                     'Actor steps: %i, Return: %f Raw return: %f '
                     'Episode steps: %f, Speed: %f steps/s, Won: %.2f',

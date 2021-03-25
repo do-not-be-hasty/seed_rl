@@ -36,5 +36,5 @@ def create_environment(_):
   task = FLAGS.task_name
 
   logging.info('Creating environment: %s', task)
-  env = StarCraft2Env(map_name=task)
+  env = StarCraft2Env(map_name=task, replay_dir=FLAGS.replay_dir)
   return env_wrappers.SCWrapper(env)

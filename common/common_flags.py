@@ -23,6 +23,8 @@ flags.DEFINE_string('logdir', '/tmp/agent', 'TensorFlow log directory.')
 flags.DEFINE_alias('job-dir', 'logdir')
 flags.DEFINE_string('server_address', 'localhost:8686', 'Server address.',
                     allow_hide_cpp=True)
+flags.DEFINE_string('replay_dir', '/tmp/agent/replays',
+                    'Directory for recorded replays.')
 
 flags.DEFINE_string('nonce', None, 'Unique ID of experiment')
 
