@@ -44,13 +44,15 @@ NONCE=id$RANDOM$RANDOM$RANDOM
 #echo "nonce created"
 
 RANDOM_PORT=$((49152 + RANDOM % (65535 - 49152)))
-SERVER_ADDRESS_LOCAL="localhost:$RANDOM_PORT"
-SERVER_ADDRESS_REMOTE="$SLURM_JOB_NODELIST:$RANDOM_PORT"
 
-echo $SLURM_JOB_NODELIST
+SERVER_HOST=`python3 ../get_learner_node.py`
+SERVER_ADDRESS="$SERVER_HOST:$RANDOM_PORT"
 
-ACTOR_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=actor --nonce=${NONCE} --server_address=$SERVER_ADDRESS_LOCAL --mrunner_config=$EXPDIR/$MRUNER_CONFIG";
-LEARNER_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=learner --nonce=${NONCE} --server_address=$SERVER_ADDRESS_LOCAL --mrunner_config=$EXPDIR/$MRUNER_CONFIG";
+echo "SLURM_JOB_NODELIST $SLURM_JOB_NODELIST"
+echo "Server address $SERVER_ADDRESS"
+
+ACTOR_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=actor --nonce=${NONCE} --server_address=$SERVER_ADDRESS --mrunner_config=$EXPDIR/$MRUNER_CONFIG";
+LEARNER_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=learner --nonce=${NONCE} --server_address=$SERVER_ADDRESS --mrunner_config=$EXPDIR/$MRUNER_CONFIG";
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
@@ -75,6 +77,8 @@ then
 else
   TASK_ID=$((SLURM_STEP_ID - 1))
   echo "Running an actor $TASK_ID"
+  # Let the learner start fully
+  sleep 30
   ${ACTOR_BINARY} --logtostderr --num_envs=${NUM_ACTORS} --task=$TASK_ID
 fi
 
