@@ -19,7 +19,7 @@ pwd
 EXPDIR=`pwd`
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-cd $DIR
+cd $DIR || exit
 
 echo "in DIR $DIR"
 
@@ -29,56 +29,40 @@ NUM_ACTORS=$SLURM_NTASKS
 MRUNER_CONFIG=$4
 shift 4
 
-echo "args read"
-
 cd ../..
 export PYTHONPATH=$PYTHONPATH:$(pwd)
-cd $DIR
+cd $DIR || exit
 
-echo "PYTHONPATH updated"
 
 export PYTHONPATH=$PYTHONPATH:/
 # set random seed common across tasks
 RANDOM=$SLURM_OB_ID
 NONCE=id$RANDOM$RANDOM$RANDOM
-#echo "nonce created"
+
 
 RANDOM_PORT=$((49152 + RANDOM % (65535 - 49152)))
-
 SERVER_HOST=`python3 ../get_learner_node.py`
 SERVER_ADDRESS="$SERVER_HOST:$RANDOM_PORT"
 
-echo "SLURM_JOB_NODELIST $SLURM_JOB_NODELIST"
-echo "Server address $SERVER_ADDRESS"
-
-ACTOR_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=actor --nonce=${NONCE} --server_address=$SERVER_ADDRESS --mrunner_config=$EXPDIR/$MRUNER_CONFIG";
-LEARNER_BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --run_mode=learner --nonce=${NONCE} --server_address=$SERVER_ADDRESS --mrunner_config=$EXPDIR/$MRUNER_CONFIG";
-
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-
-echo "-------"
-echo $ACTOR_BINARY
-echo $LEARNER_BINARY
-
-echo "TASK NO"
-echo $SLURM_STEP_ID
-
-echo "SLURM_JOB_NODELIST"
-echo $SLURM_JOB_NODELIST
-
+BINARY="python3 ../${ENVIRONMENT}/${AGENT}_main.py --nonce=${NONCE} --server_address=$SERVER_ADDRESS --mrunner_config=$EXPDIR/$MRUNER_CONFIG";
 NUM_ACTORS=$((MRUNNER_NTASKS - 1))
-echo "NUM_ACTORS"
-echo $NUM_ACTORS
+
+echo "---------------"
+echo $BINARY
+echo "SLURM_STEP_ID $SLURM_STEP_ID"
+echo "SLURM_JOB_NODELIST $SLURM_JOB_NODELIST"
+echo "NUM_ACTORS $NUM_ACTORS"
+echo "---------------"
 
 if [ 0 -eq $SLURM_STEP_ID ];
 then
     echo "Running the learner"
-    ${LEARNER_BINARY} --logtostderr --num_envs=${NUM_ACTORS}
+    ${BINARY} --run_mode=learner --logtostderr --num_envs=${NUM_ACTORS}
 else
   TASK_ID=$((SLURM_STEP_ID - 1))
   echo "Running an actor $TASK_ID"
   # Let the learner start fully
   sleep 30
-  ${ACTOR_BINARY} --logtostderr --num_envs=${NUM_ACTORS} --task=$TASK_ID
+  ${BINARY} --run_mode=actor --logtostderr --num_envs=${NUM_ACTORS} --task=$TASK_ID
 fi
 
