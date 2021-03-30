@@ -137,15 +137,10 @@ def get_configuration(config_file,
       print("Neptune will be not used.\nTo run with neptune please set your NEPTUNE_API_TOKEN variable")
     else:
       import neptune
-      import os
-      logging.error(rf"Learner entered 1 `{experiment.project}`")
-      logging.error("Dupa")
-      logging.error(os.environ['NEPTUNE_API_TOKEN'])
       try:
         neptune.init(project_qualified_name=experiment.project)
       except e:
         logging.error(rf"error:", e)
-      logging.error(rf"Learner entered 2 {experiment.project}")
       params_to_sent_to_neptune = {}
       for param_name in params:
         try:
