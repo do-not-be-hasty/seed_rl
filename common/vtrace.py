@@ -99,8 +99,8 @@ def from_importance_weights(
   rho_rank = log_rhos.shape.ndims  # Usually 2.
   values.shape.assert_has_rank(rho_rank)
   bootstrap_value.shape.assert_has_rank(rho_rank - 1)
-  discounts.shape.assert_has_rank(rho_rank)
-  rewards.shape.assert_has_rank(rho_rank)
+  rewards = tf.expand_dims(rewards, axis=-1)
+  discounts = tf.expand_dims(discounts, axis=-1)
   if clip_rho_threshold is not None:
     clip_rho_threshold.shape.assert_has_rank(0)
   if clip_pg_rho_threshold is not None:

@@ -125,10 +125,11 @@ class GFootball(tf.Module):
     # print('single frame', frame[:, 0])
     # tf.print('avail actions', avail_actions)
 
-    baseline_output = self.critic.eval(tf.concat([frame[:, i] for i in range(self.num_agents)], axis=-1))
+    # baseline_output = self.critic.eval(tf.concat([frame[:, i] for i in range(self.num_agents)], axis=-1))
+    baseline_outputs = [self.critic.eval(frame[:, i]) for i in range(self.num_agents)]
     policy_outputs = [self.actor.eval(frame[:, i]) for i in range(self.num_agents)]
 
-    return tf.stack(policy_outputs + [baseline_output], axis=1)
+    return tf.stack(policy_outputs + baseline_outputs, axis=1)
 
   def _head(self, core_output):
     # print('core output', core_output.shape, core_output)
@@ -139,9 +140,8 @@ class GFootball(tf.Module):
     # tf.print('final_logits', policy_logits, summarize=-1)
     # tf.print('shapes', policy_logits.shape, self.avail_actions.shape)
 
-    baseline_input = self.final_flatten(core_output[:, self.num_agents])
-    baseline = tf.squeeze(self._baseline(baseline_input), axis=-1)
-    # print('baseline', baseline)
+    baselines = [self._baseline(self.final_flatten(core_output[:, i])) for i in range(self.num_agents, 2*self.num_agents)]
+    baseline = tf.concat(baselines, axis=-1)
 
     # Sample an action from the policy.
     new_action = self._parametric_action_distribution.sample(policy_logits)

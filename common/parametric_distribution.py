@@ -138,7 +138,7 @@ class CategoricalDistribution(ParametricDistribution):
 class MultiCategoricalDistribution(ParametricDistribution):
   """Multidimensional categorical distribution."""
 
-  def __init__(self, n_dimensions, n_actions_per_dim, dtype):
+  def __init__(self, n_dimensions, n_actions_per_dim, dtype, event_ndims=1):
     """Initialize multimodal categorical distribution.
 
     Args:
@@ -149,7 +149,7 @@ class MultiCategoricalDistribution(ParametricDistribution):
     super().__init__(
         param_size=n_dimensions * n_actions_per_dim,
         postprocessor=tfb.Identity(),
-        event_ndims=1,
+        event_ndims=event_ndims,
         reparametrizable=False)
     self._n_dimensions = n_dimensions
     self._n_actions_per_dim = n_actions_per_dim
@@ -283,6 +283,7 @@ def get_parametric_distribution_for_action_space(action_space):
     return MultiCategoricalDistribution(
         n_dimensions=len(action_space.nvec),
         n_actions_per_dim=action_space.nvec[0],
+        event_ndims=0,
         dtype=action_space.dtype)
   elif isinstance(action_space, gym.spaces.Box):  # continuous actions
     check_box_space(action_space)
