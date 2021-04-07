@@ -13,6 +13,14 @@
 # limitations under the License.
 
 """Utility functions/classes."""
+import datetime
+import os
+import re
+import socket
+from munch import Munch
+import cloudpickle
+import ast
+import neptune_tensorboard
 
 import atexit
 import collections
@@ -55,6 +63,84 @@ def log_metric(name, value, namespace=None):
     full_name = namespace + ' ' + name if namespace else name
     # print(full_name, value)
     neptune.log_metric(full_name, value)
+
+
+# TODO(): include this to mrunner
+def get_configuration(config_file,
+                      print_diagnostics=False, with_neptune=False,
+                      inject_parameters_to_gin=False,
+                      inject_parameters_to_FLAGS=False,
+                      env_to_properties_regexp=".*PWD",
+                      integrate_with_tensorboard=False):
+  FLAGS = flags.FLAGS
+
+  if config_file is None:
+    return {}
+
+  # with_neptune might be also an id of an experiment
+  global experiment_
+
+  # This is here for running remotely, load experiment from dump
+  with open(config_file, "rb") as f:
+    experiment = Munch(cloudpickle.load(f))
+  params = Munch(experiment['parameters'])
+  git_info = experiment.get("git_info", None)
+  if git_info:
+    git_info.commit_date = datetime.datetime.now()
+
+  if inject_parameters_to_gin:
+    raise NotImplementedError()
+
+  if with_neptune:
+    if 'NEPTUNE_API_TOKEN' not in os.environ:
+      print("Neptune will be not used.\nTo run with neptune please set your NEPTUNE_API_TOKEN variable")
+    else:
+      neptune.init(project_qualified_name=experiment.project)
+      params_to_sent_to_neptune = {}
+      for param_name in params:
+        try:
+          val = str(params[param_name])
+          if val.isnumeric():
+            val = ast.literal_eval(val)
+          params_to_sent_to_neptune[param_name] = val
+        except:
+          print(
+            "Not possible to send to neptune:{}. Implement __str__".format(
+              param_name))
+
+      # Set pwd property with path to experiment.
+      properties = {key: os.environ[key] for key in os.environ
+                    if re.match(env_to_properties_regexp, key)}
+      tags = experiment.tags + [FLAGS.nonce]
+      neptune.create_experiment(name=experiment.name, tags=tags,
+                                params=params, properties=properties,
+                                git_info=git_info)
+
+      atexit.register(neptune.stop)
+      experiment_ = neptune.get_experiment()
+      if integrate_with_tensorboard:
+        neptune_tensorboard.integrate_with_tensorflow()
+
+  if type(with_neptune) == str:
+    print("Connecting to experiment:", with_neptune)
+    print_diagnostics = False
+    neptune.init(project_qualified_name=experiment.project)
+    experiment_ = neptune.project.get_experiments(with_neptune)[0]
+
+  if print_diagnostics:
+    print("PYTHONPATH:{}".format(os.environ.get('PYTHONPATH', 'not_defined')))
+    print("cd {}".format(os.getcwd()))
+    print(socket.getfqdn())
+    print("Params:{}".format(params))
+
+  if inject_parameters_to_FLAGS:
+    FLAGS = flags.FLAGS
+
+    for p in params:
+      # possibly there is a proper api for that?
+      setattr(FLAGS, p, params[p])
+
+  return params
 
 
 def init_learner_multi_host(num_training_tpus: int):
