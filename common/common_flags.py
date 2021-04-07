@@ -48,3 +48,5 @@ flags.DEFINE_integer('num_action_repeats', 1, 'Number of action repeats.')
 
 flags.DEFINE_bool('is_local', False,
                   'Whether the program is running locally.')
+flags.DEFINE_bool('is_centralized', True,
+                  'Whether to use centralized critic network.')

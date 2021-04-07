@@ -1,6 +1,6 @@
  contexts:
    prometheus_cpu:
-     account: plgplanningrl2
+     account: plgadvancedplanning
      backend_type: slurm
      cmd_type: sbatch
      partition: plgrid
@@ -15,7 +15,7 @@
      singularity_container: /net/people/plgmizaw/singularity/starcraft_cpu_2.sif
 
    eagle_cpu:
-     account: plgplanningrl2
+     account: plgadvancedplanning
      backend_type: slurm
      cmd_type: sbatch
      partition: standard

@@ -17,7 +17,10 @@
 import collections
 from seed_rl.common import utils
 from seed_rl.starcraft import observation
+from absl import flags
 import tensorflow as tf
+
+FLAGS = flags.FLAGS
 
 AgentOutput = collections.namedtuple('AgentOutput',
                                      'action policy_logits baseline')
@@ -71,12 +74,12 @@ class SimpleNetwork(tf.Module):
 
     self.layer0 = tf.keras.layers.Dense(64, activation=None)
     if self.use_norm:
-      self.norm0  = tf.keras.layers.LayerNormalization()
-    self.act0   = tf.keras.layers.ReLU()
+      self.norm0 = tf.keras.layers.LayerNormalization()
+    self.act0 = tf.keras.layers.ReLU()
     self.layer1 = tf.keras.layers.Dense(64, activation=None)
     if self.use_norm:
-      self.norm1  = tf.keras.layers.LayerNormalization()
-    self.act1   = tf.keras.layers.ReLU()
+      self.norm1 = tf.keras.layers.LayerNormalization()
+    self.act1 = tf.keras.layers.ReLU()
 
   def eval(self, input):
     x = self.layer0(input)
@@ -137,11 +140,16 @@ class StarcraftAgentNetwork(tf.Module):
       for i in range(self.num_agents)
     ], axis=1)
 
-    baseline_output = self.critic.eval(state)
     policy_outputs = [
       self.actor.eval(frame[:, i]) for i in range(self.num_agents)]
 
-    return tf.stack(policy_outputs + [baseline_output], axis=1)
+    if FLAGS.is_centralized:
+      baseline_outputs = [self.critic.eval(state)]
+    else:
+      baseline_outputs = [
+        self.critic.eval(frame[:, i]) for i in range(self.num_agents)]
+
+    return tf.stack(policy_outputs + baseline_outputs, axis=1)
 
   def _head(self, core_output):
     policy_logits = tf.concat([
@@ -154,8 +162,13 @@ class StarcraftAgentNetwork(tf.Module):
                     (1 - self.avail_actions) * 100
 
     # Output of baseline torso is the last row.
-    baseline_input = self.final_flatten(core_output[:, self.num_agents])
-    baseline = tf.squeeze(self._baseline(baseline_input), axis=-1)
+    if FLAGS.is_centralized:
+      baseline_input = self.final_flatten(core_output[:, self.num_agents])
+      baseline = tf.squeeze(self._baseline(baseline_input), axis=-1)
+    else:
+      baselines = [self._baseline(self.final_flatten(core_output[:, i])) for i in
+                   range(self.num_agents, 2 * self.num_agents)]
+      baseline = tf.concat(baselines, axis=-1)
 
     new_action = self._parametric_action_distribution.sample(policy_logits)
 
