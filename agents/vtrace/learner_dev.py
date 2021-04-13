@@ -69,7 +69,7 @@ flags.DEFINE_integer('log_episode_frequency', 1, 'We average that many episodes'
 
 FLAGS = flags.FLAGS
 
-
+inference_funs = []
 def compute_loss(logger, parametric_action_distribution, agent, agent_state,
                  prev_actions, env_outputs, agent_outputs):
   # Networks expect postprocessed prev_actions but it's done during inference.
@@ -424,11 +424,13 @@ def learner_loop(create_env_fn, create_agent_fn, create_optimizer_fn):
           return parametric_action_distribution.postprocess(
               agent_outputs.action)
 
+        inference_funs.append(inference)
+
         return inference
 
       with strategy.scope():
         server.bind([create_inference_fn(d) for d in inference_devices])
-      server.start()
+      # server.start()
       unroll_queues.append(unroll_queue)
       servers.append(server)
 
@@ -492,7 +494,11 @@ def learner_loop(create_env_fn, create_agent_fn, create_optimizer_fn):
       # the graph). This way we can load it after the code/parameters changed.
       tf.saved_model.save(agent, os.path.join(FLAGS.logdir, 'saved_model'))
       last_ckpt_time = current_time
+
+    yield 1
+    print("About to minimize")
     minimize(it)
+    print("minimize done")
   logger.shutdown()
   manager.save()
   tf.saved_model.save(agent, os.path.join(FLAGS.logdir, 'saved_model'))

@@ -35,8 +35,8 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from tensorflow.python.distribute import values as values_lib  
-from tensorflow.python.framework import composite_tensor  
+from tensorflow.python.distribute import values as values_lib
+from tensorflow.python.framework import composite_tensor
 from tensorflow.python.framework import tensor_conversion_registry
 
 import neptune
@@ -80,13 +80,33 @@ def get_configuration(config_file,
   # with_neptune might be also an id of an experiment
   global experiment_
 
-  # This is here for running remotely, load experiment from dump
-  with open(config_file, "rb") as f:
-    experiment = Munch(cloudpickle.load(f))
-  params = Munch(experiment['parameters'])
-  git_info = experiment.get("git_info", None)
-  if git_info:
-    git_info.commit_date = datetime.datetime.now()
+  params = None
+  try:
+    # This is here for running remotely, load experiment from dump
+    with open(config_file, "rb") as f:
+      experiment = Munch(cloudpickle.load(f))
+      params = Munch(experiment['parameters'])
+  except:
+    pass
+
+  try:
+    # This is here for running locally, load experiment from spec
+    from path import Path
+    vars_ = {'script': str(Path(config_file).name)}
+    exec(open(config_file).read(), vars_)
+    experiments = vars_['experiments_list']
+    experiment = experiments[0]
+    params = experiment.parameters
+  except:
+    pass
+
+  if params is None:
+    print("No configuration could be read.")
+    return
+
+  # git_info = experiment.get("git_info", None)
+  # if git_info:
+  #   git_info.commit_date = datetime.datetime.now()
 
   if inject_parameters_to_gin:
     raise NotImplementedError()
@@ -267,14 +287,14 @@ class UnrollStore(tf.Module):
         tf.shape(env_ids),
         tf.shape(tf.unique(env_ids)[0]),
         message='Duplicate environment ids')
-    
+
     tf.nest.map_structure(
         lambda s: tf.debugging.assert_equal(
             tf.shape(env_ids)[0],
             tf.shape(s)[0],
             message='Batch dimension must equal the number of environments.'),
         values)
-    
+
 
     curr_indices = self._index.sparse_read(env_ids)
     unroll_indices = tf.stack([env_ids, curr_indices], axis=-1)
@@ -390,7 +410,7 @@ class PrioritizedReplay(tf.Module):
     size = self._priorities.shape[0]
     insert_indices = tf.range(start_index, end_index) % size
     tf.nest.map_structure(
-        lambda b, v: b.batch_scatter_update(  
+        lambda b, v: b.batch_scatter_update(
             tf.IndexedSlices(v, insert_indices)),
         self._buffer,
         values)
@@ -827,7 +847,7 @@ def make_time_major(x):
     x transposed along the first two dimensions.
   """
 
-  def transpose(t):  
+  def transpose(t):
     t_static_shape = t.shape
     if t_static_shape.rank is not None and t_static_shape.rank < 2:
       return t
@@ -958,7 +978,7 @@ def tpu_encode(ts):
     A tf.nest of encoded Tensors.
   """
 
-  def visit(t):  
+  def visit(t):
     num_elements = t.shape.num_elements()
     # We need a multiple of 128 elements: encoding reduces the number of
     # elements by a factor 4 (packing uint8s into uint32s), and first thing
@@ -1001,7 +1021,7 @@ def tpu_decode(ts, structure=None):
     A nest of decoded tensors packed as `structure` if available, otherwise
     packed as `ts`.
   """
-  def visit(t, s):  
+  def visit(t, s):
     s = s.values[0] if isinstance(s, values_lib.PerReplica) else s
     if isinstance(s, TPUEncodedUInt8):
       x = t.encoded if isinstance(t, TPUEncodedUInt8) else t
@@ -1038,7 +1058,7 @@ def split_structure(structure, prefix_length, axis=0):
           tf.nest.pack_sequence_as(structure, flattened_suffix))
 
 
-class nullcontext(object):  
+class nullcontext(object):
 
   def __init__(self, *args, **kwds):
     del args  # unused
