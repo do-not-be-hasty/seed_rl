@@ -1092,6 +1092,7 @@ def validate_learner_config(config, num_hosts=1):
   """Shared part of learner config validation."""
   assert config.num_envs > 0
   assert config.env_batch_size > 0
+  assert not (config.centralized_IS and config.is_centralized)
   if config.inference_batch_size == -1:
     config.inference_batch_size = max(1, config.num_envs // (2 * num_hosts))
   assert config.inference_batch_size % config.env_batch_size == 0, (
