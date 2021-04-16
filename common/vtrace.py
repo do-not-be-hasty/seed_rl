@@ -89,6 +89,10 @@ def from_importance_weights(
     # we broadcast to keep the calculation logic (might be redundant)
     log_rhos = tf.broadcast_to(tf.reduce_mean(log_rhos, axis=-1, keepdims=True),
                                log_rhos.shape)
+  if FLAGS.mean_value_function:
+    # we broadcast to keep the calculation logic (might be redundant)
+    values = tf.broadcast_to(tf.reduce_mean(values, axis=-1, keepdims=True),
+                             values.shape)
 
   log_rhos = tf.convert_to_tensor(log_rhos, dtype=tf.float32)
   discounts = tf.convert_to_tensor(discounts, dtype=tf.float32)

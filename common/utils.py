@@ -104,9 +104,9 @@ def get_configuration(config_file,
     print("No configuration could be read.")
     return
 
-  # git_info = experiment.get("git_info", None)
-  # if git_info:
-  #   git_info.commit_date = datetime.datetime.now()
+  git_info = experiment.get("git_info", None)
+  if git_info:
+    git_info.commit_date = datetime.datetime.now()
 
   if inject_parameters_to_gin:
     raise NotImplementedError()
@@ -1093,6 +1093,7 @@ def validate_learner_config(config, num_hosts=1):
   assert config.num_envs > 0
   assert config.env_batch_size > 0
   assert not (config.centralized_IS and config.is_centralized)
+  assert not (config.centralized_IS and config.mean_value_function)
   if config.inference_batch_size == -1:
     config.inference_batch_size = max(1, config.num_envs // (2 * num_hosts))
   assert config.inference_batch_size % config.env_batch_size == 0, (
