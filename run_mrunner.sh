@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if [ "$#" -ne 1 ]; then
-    echo "Usage: ./scripts/run_mrunner [project_tags]"
+    echo "Usage: ./run_mrunner [project_tags]"
     exit 1
 fi
 

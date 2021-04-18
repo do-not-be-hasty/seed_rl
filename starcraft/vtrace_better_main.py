@@ -14,7 +14,7 @@
 
 
 """V-trace (IMPALA) learner for Google Research Football."""
-
+import neptune_tensorboard
 from absl import app
 from absl import flags
 
@@ -26,6 +26,9 @@ from seed_rl.starcraft import env
 from seed_rl.starcraft import networks
 from seed_rl.starcraft import visualize
 import tensorflow as tf
+import neptune
+
+from mrunner.helpers.client_helper import get_configuration
 
 
 FLAGS = flags.FLAGS
@@ -53,15 +56,18 @@ def main(argv):
   if len(argv) > 1:
     raise app.UsageError('Too many command-line arguments.')
   if FLAGS.run_mode == 'actor':
-    utils.get_configuration(FLAGS.mrunner_config,
-                            inject_parameters_to_FLAGS=True)
+    if not FLAGS.is_local:
+      get_configuration(config_file=FLAGS.mrunner_config,
+                        inject_parameters_to_FLAGS=True)
     actor.actor_loop(env.create_environment)
   elif FLAGS.run_mode == 'learner':
-
-    utils.get_configuration(FLAGS.mrunner_config,
-                            print_diagnostics=True, with_neptune=True,
-                            inject_parameters_to_FLAGS=True,
-                            integrate_with_tensorboard=True)
+    if not FLAGS.is_local:
+      get_configuration(config_file=FLAGS.mrunner_config,
+                        print_diagnostics=True, with_neptune=True,
+                        inject_parameters_to_FLAGS=True)
+      experiment = neptune.get_experiment()
+      experiment.append_tag(tag=FLAGS.nonce)
+      neptune_tensorboard.integrate_with_tensorflow()
     learner.learner_loop(env.create_environment,
                          create_agent,
                          create_optimizer)
