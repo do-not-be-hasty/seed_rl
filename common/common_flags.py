@@ -50,3 +50,7 @@ flags.DEFINE_bool('is_local', False,
                   'Whether the program is running locally.')
 flags.DEFINE_bool('is_centralized', True,
                   'Whether to use centralized critic network.')
+flags.DEFINE_bool('centralized_IS', False,
+                  'Use centralized importance sampling')
+flags.DEFINE_bool('mean_value_function', False,
+                  'Use mean value function in the decentralized training')

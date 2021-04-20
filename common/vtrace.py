@@ -85,6 +85,14 @@ def from_importance_weights(
   """
 
   log_rhos = target_action_log_probs - behaviour_action_log_probs
+  if FLAGS.centralized_IS:
+    # we broadcast to keep the calculation logic (might be redundant)
+    log_rhos = tf.broadcast_to(tf.reduce_sum(log_rhos, axis=-1, keepdims=True),
+                               log_rhos.shape)
+  if FLAGS.mean_value_function:
+    # we broadcast to keep the calculation logic (might be redundant)
+    values = tf.broadcast_to(tf.reduce_mean(values, axis=-1, keepdims=True),
+                             values.shape)
 
   log_rhos = tf.convert_to_tensor(log_rhos, dtype=tf.float32)
   discounts = tf.convert_to_tensor(discounts, dtype=tf.float32)
