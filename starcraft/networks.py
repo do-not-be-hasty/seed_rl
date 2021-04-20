@@ -22,6 +22,10 @@ import tensorflow as tf
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_bool('full_state_critic', False,
+                  'Whether the critic network uses hidden state '
+                  'of the environment.')
+
 AgentOutput = collections.namedtuple('AgentOutput',
                                      'action policy_logits baseline')
 
@@ -82,7 +86,8 @@ class SimpleNetwork(tf.Module):
     self.act1 = tf.keras.layers.ReLU()
 
   def eval(self, input):
-    x = self.layer0(input)
+    x = input
+    x = self.layer0(x)
     if self.use_norm:
       x = self.norm0(x)
     x = self.act0(x)
@@ -144,7 +149,14 @@ class StarcraftAgentNetwork(tf.Module):
       self.actor.eval(frame[:, i]) for i in range(self.num_agents)]
 
     if FLAGS.is_centralized:
-      baseline_outputs = [self.critic.eval(state)]
+      if FLAGS.full_state_critic:
+        # state-based critic
+        baseline_outputs = [self.critic.eval(state)]
+      else:
+        # observation-based critic
+        baseline_outputs = [
+          self.critic.eval(
+            tf.concat([frame[:, i] for i in range(self.num_agents)], axis=-1))]
     else:
       baseline_outputs = [
         self.critic.eval(frame[:, i]) for i in range(self.num_agents)]
