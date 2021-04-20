@@ -22,7 +22,7 @@ import tensorflow as tf
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_bool('full_state_critic', False,
+flags.DEFINE_bool('full_state_critic', True,
                   'Whether the critic network uses hidden state '
                   'of the environment.')
 
