@@ -1004,5 +1004,7 @@ def validate_learner_config(config, num_hosts=1):
       (config.inference_batch_size, config.env_batch_size))
   assert config.num_envs >= config.inference_batch_size * num_hosts, (
       'Inference batch size is bigger than the number of environments.')
+  assert not (config.is_action_aware and config.is_centralized), (
+      'Operationally action aware is similar to decentralized.')
 
 

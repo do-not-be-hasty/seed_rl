@@ -127,7 +127,7 @@ class StarcraftAgentNetwork(tf.Module):
   def initial_state(self, batch_size):
     return ()
 
-  def _torso(self, unused_prev_action, env_output):
+  def _torso(self, prev_action, env_output):
     _, _, frame_and_actions_and_state, _, _ = env_output
 
     # Divide the environment output onto observations and available actions.
@@ -157,6 +157,22 @@ class StarcraftAgentNetwork(tf.Module):
         baseline_outputs = [
           self.critic.eval(
             tf.concat([frame[:, i] for i in range(self.num_agents)], axis=-1))]
+    elif FLAGS.is_action_aware:
+      prev_action_one_hot = tf.one_hot(prev_action, self.num_actions)
+      frame_action = tf.concat([frame, prev_action_one_hot], axis=-1)
+      mask = tf.concat([tf.ones_like(frame[:, 0, :]),
+                        tf.zeros_like(prev_action_one_hot[:, 0, :])], axis=-1)
+
+      baseline_outputs = []
+      for agent in range(self.num_agents):
+        agent_obs_stacked \
+          = [frame_action[:, (agent + i) % self.num_agents, :] for i in
+             range(self.num_agents)]
+        # remove action of the ego agent
+        agent_obs_stacked[0] = agent_obs_stacked[0] * mask
+        agent_obs = tf.concat(agent_obs_stacked, axis=-1)
+        baseline_outputs.append(self.critic.eval(agent_obs))
+
     else:
       baseline_outputs = [
         self.critic.eval(frame[:, i]) for i in range(self.num_agents)]
