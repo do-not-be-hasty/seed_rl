@@ -322,6 +322,7 @@ class ParticleWrapper(gym.Env):
 class SCWrapper(gym.Env):
   def __init__(self, env, normalization=None):
     self.env = env
+    self.stacked_obs = []
 
     if normalization is None:
       self.normalization = (lambda x: x)
@@ -337,7 +338,7 @@ class SCWrapper(gym.Env):
     self.observation_space = gym.spaces.Box(
       low=-np.inf,
       high=np.inf,
-      shape=(info['n_agents'], info['obs_shape'] + info['n_actions'] + info['state_shape']))
+      shape=(info['n_agents'], info['obs_shape']*FLAGS.frames_stacked + info['n_actions'] + info['state_shape']))
     self.observation_space.dtype = np.float32
 
     self.state_dim = info['state_shape']
@@ -345,6 +346,7 @@ class SCWrapper(gym.Env):
     print(self.action_space, self.observation_space, 'state size:', self.state_dim)
 
   def reset(self):
+    self.stacked_obs = []
     self.env.reset()
     obs = self.env.get_obs()
     return self._convert_observation(obs)
@@ -358,15 +360,24 @@ class SCWrapper(gym.Env):
   def render(self, mode='human'):
     return self.env.render(mode)
 
+  def _add_new_obs(self, obs):
+    if self.stacked_obs == []:
+      self.stacked_obs = [np.zeros_like(obs)] * (FLAGS.frames_stacked - 1) + [obs]
+    else:
+      self.stacked_obs = self.stacked_obs[1:] + [obs]
+
   def _convert_observation(self, obs):
     # Prepare raw observation for agent network.
     # Add information about available actions.
+    self._add_new_obs(obs)
+
     return np.stack([
       np.concatenate([
-        self.normalization(obs[i]),
-        self.env.get_avail_agent_actions(i),
+        self.normalization(self.stacked_obs[stack_i][agent_i])
+                       for stack_i in range(FLAGS.frames_stacked)] + [
+        self.env.get_avail_agent_actions(agent_i),
         self.env.get_state(),
-      ]) for i in range(self.num_agents)
+      ]) for agent_i in range(self.num_agents)
     ], axis=0).astype(np.float32)
 
   def _convert_action(self, action):
